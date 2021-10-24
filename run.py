@@ -28,8 +28,8 @@ from torchdiffeq import odeint_adjoint as odeint
 #from jupyterthemes import jtplot
 #jtplot.style(theme="chesterish")
  # CONSTANT 
-device = "cuda"
-torch.device("cuda")
+device = "cpu"
+#torch.device("cuda")
 EPOCHS=1
 BATCH_SIZE=32
 IMG_SIZE=(32,32,3)
@@ -150,7 +150,7 @@ def add_noise(converted_data, sigma = 10):
     pertubed_data = converted_data + torch.normal(torch.zeros(converted_data.shape),
                                                   torch.ones(converted_data.shape) * sigma)
     return pertubed_data
-def preprocess_data(data, shape = (28,28), device="cpu")):
+def preprocess_data(data, shape = (28,28), device="cpu"):
     X = []
     Y = []
     for data_idx, (x,y) in list(enumerate(data)):
