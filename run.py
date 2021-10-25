@@ -193,7 +193,7 @@ def preprocess_data(data, shape = (28,28), device="cpu"):
     x_data = torch.Tensor(X)
     x_data = x_data.to(device)
     ds = TensorDataset(x_data,y_data)
-    x_noise_data = add_noise(x_data, device="device")
+    x_noise_data = add_noise(x_data, device=device)
     pertubed_ds = TensorDataset(x_noise_data,y_data)
     ds_len = len(Y)
     return ds_len, ds, pertubed_ds
