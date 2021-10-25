@@ -23,7 +23,7 @@ import torch.nn.functional as F
 from torch.utils.data import TensorDataset, DataLoader, random_split
 import torchvision
 #import matplotlib.pyplot as plt
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 from torchdiffeq import odeint_adjoint as odeint
 import argparse
 
