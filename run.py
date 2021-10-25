@@ -139,19 +139,24 @@ class ODENet(nn.Module):
 class Network(nn.Module):
     def __init__(self):
         super(Network, self).__init__()
-        self.net = nn.Sequential(*[
+        self.fe = nn.Sequential(*[
             nn.Conv2d(1,64,3,1),
             nn.GroupNorm(4,64),
             nn.ReLU(),
             nn.Conv2d(64,64,4,2),
             nn.GroupNorm(4,64),
-            nn.ReLU(),
+            nn.ReLU()
+             
+        ])
+        self.rm = nn.Sequential(*[
             nn.Conv2d(64,64,3,1, padding=1),
             nn.GroupNorm(4,64),
             nn.ReLU(), 
             nn.Conv2d(64,64,3,1, padding=1),
             nn.GroupNorm(4,64),
             nn.ReLU(),
+        ])
+        self.fcc = nn.Sequential(*[
             nn.Conv2d(64,1,3,1,padding=1),
             nn.AdaptiveAvgPool2d(8),
             nn.Flatten(),
@@ -159,6 +164,11 @@ class Network(nn.Module):
             nn.Softmax()
         ])
     def forward(self,x):
+        out = self.fe(x)
+        out = out + self.rm(out)
+        out = self.fcc(out)
+        return out
+
         return self.net(x)
     def evaluate(self, test_loader):
         correct = 0
@@ -239,14 +249,14 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100):
         acc = round(correct/total * 1.0, 2)
         #print("Accuracy was calculated")
         history["acc"].append(acc)
-        history["loss"].append(loss)
+        history["loss"].append(running_loss)
         print("Before evaluate")
         val_loss, val_acc = model.evaluate(val_loader)
         print("After evaluation")
         history["val_loss"].append(val_loss)
         history["val_acc"].append(val_acc)
         print(f"Epoch(s) {epoch_id + 1} | loss: {loss} | acc: {acc} | val_loss: {val_loss} | val_acc: {val_acc}")
-    return model, history
+    return history
 
 
 
@@ -264,12 +274,12 @@ def main(ds_len, ds, name = "mnist_normal",batch_size=32,epochs=100, lr=1e-3,dat
     ode_optimizer = torch.optim.Adam(ode_model.parameters(), lr=lr)
     dnn_model = Network().to(device)
     dnn_optimizer = torch.optim.Adam(dnn_model.parameters(), lr=lr)
-    ode_his = train_model(ode_model,
-                          ode_optimizer,
-                          train_loader, val_loader, loss_fn=loss_fn, epochs=1)
     dnn_his = train_model(dnn_model, 
                          dnn_optimizer,
-                         train_loader, val_loader, loss_fn=loss_fn,epochs=1)
+                         train_loader, val_loader, loss_fn=loss_fn,epochs=epochs)
+    ode_his = train_model(ode_model,
+                          ode_optimizer,
+                          train_loader, val_loader, loss_fn=loss_fn, epochs=epochs)
     return ode_his, dnn_his
 
 # Test   
@@ -287,11 +297,11 @@ MNIST = torchvision.datasets.MNIST(DATA_DIR,
 
 ds_len_, normal_ds_, pertubed_ds_ = preprocess_data(MNIST, device=device)
 
-ode_his, dnn_his = main(ds_len_,normal_ds_, device=device, batch_size=BATCH_SIZE, epochs=epochs, data_dis=DATA_DISTRIBUTION)
+ode_his, dnn_his = main(ds_len_,normal_ds_, device=device, batch_size=BATCH_SIZE, epochs=EPOCHS, data_dis=DATA_DISTRIBUTION)
 import json
-with open(f'{result}/ode_results.json', 'w', encoding='utf-8') as fo:
+with open(f'{RESULT_DIR}/ode_results.json', 'w', encoding='utf-8') as fo:
     json.dump(ode_his, fo, indent=4)
-with open(f'{result}/dnn_results.json', 'w', encoding='utf-8') as fd:
+with open(f'{RESULT_DIR}/dnn_results.json', 'w', encoding='utf-8') as fd:
     json.dump(dnn_his, fd, indent=4) 
 
 
