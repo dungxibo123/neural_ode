@@ -201,7 +201,7 @@ def preprocess_data(data, shape = (28,28), device="cpu"):
 
 def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100):
     print(model.eval())
-
+    print(sum(p.numel() for p in model.parameters() if p.requires_grad))
     history = {"loss": [], "acc": [], "val_loss": [], "val_acc": []}
     for epoch_id in tqdm(range(epochs)):
         total = 0
