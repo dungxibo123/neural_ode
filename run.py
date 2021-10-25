@@ -22,8 +22,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import TensorDataset, DataLoader, random_split
 import torchvision
-import matplotlib.pyplot as plt
-from tqdm.notebook import tqdm
+#import matplotlib.pyplot as plt
+from tqdm import tqdm
 from torchdiffeq import odeint_adjoint as odeint
 import argparse
 
@@ -32,7 +32,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("-d", "--device", type=str, default="cpu", help="Device which the PyTorch run on")
 parser.add_argument("-bs", "--batch-size", type=int, default=1024, help="Batch size of 1 iteration")
-parser.add_argument("-ep", "--epochs", type=int, default=100, help="Numbers of epoch")
+parser.add_argument("-ep", "--epochs", type=int, default=200, help="Numbers of epoch")
 parser.add_argument("-f", "--folder", type=str, default="./data/mnist", help="Folder /path/to/mnist/dataset")
 parser.add_argument("-r", "--result", type=str, default="./result", help="Folder where the result going in")
 parser.add_argument("-tr", "--train", type=int, default=8000, help="Number of train images")
@@ -122,7 +122,7 @@ class ODENet(nn.Module):
         running_loss = 0
         
         with torch.no_grad():
-            for test_data in test_loader:
+            for batch_id , test_data in enumerate(test_loader,0):
                 data, label = test_data
                 outputs = self.forward(data)
                 _, correct_labels = torch.max(label, 1) 
@@ -131,8 +131,9 @@ class ODENet(nn.Module):
                 correct += (predicted == correct_labels).sum().item()
                 running_loss += F.torch.nn.functional.binary_cross_entropy_with_logits(
                     outputs.float(), label.float()).item()
-        acc = round(correct/toral * 1.0 , 2)
-        
+        #        print(f"--> Total {total}\n-->batch_id: {batch_id + 1}")
+        acc = round(correct/total * 1.0 , 2)
+         
         return running_loss,acc
 
 class Network(nn.Module):
@@ -174,7 +175,7 @@ class Network(nn.Module):
                 correct += (predicted == correct_labels).sum().item()
                 running_loss += F.torch.nn.functional.binary_cross_entropy_with_logits(
                     outputs.float(), label.float()).item()
-        acc = round(correct/toral * 1.0 , 2)
+        acc = round(correct/total * 1.0 , 2)
         
         return running_loss,acc
 
@@ -193,7 +194,7 @@ def preprocess_data(data, shape = (28,28), device="cpu"):
     x_data = torch.Tensor(X)
     x_data = x_data.to(device)
     ds = TensorDataset(x_data,y_data)
-    x_noise_data = add_noise(x_data, device="device")
+    x_noise_data = add_noise(x_data, device=device)
     pertubed_ds = TensorDataset(x_noise_data,y_data)
     ds_len = len(Y)
     return ds_len, ds, pertubed_ds
@@ -210,35 +211,38 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100):
         print(f"Start epoch number: {epoch_id + 1}")
         for batch_id, data in enumerate(train_loader, 0):
             # get the inputs; data is a list of [inputs, labels]
-            print(f"Start batch number: {batch_id + 1} in epoch number: {epoch_id + 1}")
+            #print(f"Start batch number: {batch_id + 1} in epoch number: {epoch_id + 1}")
             inputs, labels = data
-            print(f"Get data done")
+            #print(f"Get data done")
             # zero the parameter gradients
             optimizer.zero_grad()
-            print(f"Reset the optimizer backward, grad to 0") 
+            #print(f"Reset the optimizer backward, grad to 0") 
             # forward + backward + optimize
             outputs = model(inputs)
-            print(f"forward data through model")
+            #print(f"forward data through model")
             _, predicted = torch.max(outputs, 1)
-            print(f"Get predicted class")
+            #print(f"Get predicted class")
             _, correct_labels = torch.max(labels, 1)
-            print(f"Get label class")
+            #print(f"Get label class")
             #print(labels)
             total += labels.size(0)
             correct += (predicted == correct_labels).sum().item()
-            print("Calculate the number of correct predictions")
+            #print("Calculate the number of correct predictions")
             #print(labels.shape, outputs.shape)
             loss = loss_fn(outputs.float(), labels.float())
             loss.backward()
-            print("Backward loss")
+            #print("Backward loss")
             optimizer.step()
-            print("Step")
+            #print("Step")
             running_loss += loss.item() 
-            print(f"End batch number: {batch_id + 1} in epoch number {epoch_id + 1}")
+            #print(f"End batch number: {batch_id + 1} in epoch number {epoch_id + 1}")
         acc = round(correct/total * 1.0, 2)
+        #print("Accuracy was calculated")
         history["acc"].append(acc)
         history["loss"].append(loss)
+        print("Before evaluate")
         val_loss, val_acc = model.evaluate(val_loader)
+        print("After evaluation")
         history["val_loss"].append(val_loss)
         history["val_acc"].append(val_acc)
         print(f"Epoch(s) {epoch_id + 1} | loss: {loss} | acc: {acc} | val_loss: {val_loss} | val_acc: {val_acc}")
@@ -253,10 +257,10 @@ def main(ds_len, ds, name = "mnist_normal",batch_size=32,epochs=100, lr=1e-3,dat
     #print(type(train_set))
     assert isinstance(train_set,torch.utils.data.Dataset)
     train_loader = DataLoader(train_set, shuffle=True, batch_size=batch_size)
-    val_loader = DataLoader(val_set, shuffle=True)
+    val_loader = DataLoader(val_set, shuffle=True, batch_size=data_dis[1])
     loss_fn = torch.nn.functional.binary_cross_entropy_with_logits
-    ode_func = ODEBlock()
-    ode_model = ODENet(ode_func).to(device)
+    ode_func = ODEBlock().to(device)
+    ode_model = ODENet(ode_func, device=device).to(device)
     ode_optimizer = torch.optim.Adam(ode_model.parameters(), lr=lr)
     dnn_model = Network().to(device)
     dnn_optimizer = torch.optim.Adam(dnn_model.parameters(), lr=lr)
@@ -266,6 +270,7 @@ def main(ds_len, ds, name = "mnist_normal",batch_size=32,epochs=100, lr=1e-3,dat
     dnn_his = train_model(dnn_model, 
                          dnn_optimizer,
                          train_loader, val_loader, loss_fn=loss_fn,epochs=1)
+    return ode_his, dnn_his
 
 # Test   
 #test_input = torch.rand((1,1,28,28))
@@ -282,7 +287,12 @@ MNIST = torchvision.datasets.MNIST(DATA_DIR,
 
 ds_len_, normal_ds_, pertubed_ds_ = preprocess_data(MNIST, device=device)
 
-main(ds_len_,normal_ds_, device=device, batch_size=BATCH_SIZE, epochs=1, data_dis=DATA_DISTRIBUTION)
+ode_his, dnn_his = main(ds_len_,normal_ds_, device=device, batch_size=BATCH_SIZE, epochs=epochs, data_dis=DATA_DISTRIBUTION)
+import json
+with open(f'{result}/ode_results.json', 'w', encoding='utf-8') as fo:
+    json.dump(ode_his, fo, indent=4)
+with open(f'{result}/dnn_results.json', 'w', encoding='utf-8') as fd:
+    json.dump(dnn_his, fd, indent=4) 
 
 
 
