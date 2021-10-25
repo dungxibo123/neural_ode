@@ -178,9 +178,9 @@ class Network(nn.Module):
         
         return running_loss,acc
 
-def add_noise(converted_data, sigma = 10):
+def add_noise(converted_data, sigma = 10,device="cpu"):
     pertubed_data = converted_data + torch.normal(torch.zeros(converted_data.shape),
-                                                  torch.ones(converted_data.shape) * sigma)
+                                                  torch.ones(converted_data.shape) * sigma).to(device)
     return pertubed_data
 def preprocess_data(data, shape = (28,28), device="cpu"):
     X = []
@@ -193,7 +193,7 @@ def preprocess_data(data, shape = (28,28), device="cpu"):
     x_data = torch.Tensor(X)
     x_data = x_data.to(device)
     ds = TensorDataset(x_data,y_data)
-    x_noise_data = add_noise(x_data)
+    x_noise_data = add_noise(x_data, device="device")
     pertubed_ds = TensorDataset(x_noise_data,y_data)
     ds_len = len(Y)
     return ds_len, ds, pertubed_ds
@@ -201,7 +201,7 @@ def preprocess_data(data, shape = (28,28), device="cpu"):
 
 def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100):
     print(model.eval())
-    print(sum(p.numel() for p in model.parameters() if p.requires_grad))
+    print(f"Numbers of parameters in model: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
     history = {"loss": [], "acc": [], "val_loss": [], "val_acc": []}
     for epoch_id in tqdm(range(epochs)):
         total = 0
