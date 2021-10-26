@@ -76,7 +76,7 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100):
             #print("Step")
             running_loss += loss.item() 
             #print(f"End batch number: {batch_id + 1} in epoch number {epoch_id + 1}")
-        acc = round(correct/total * 1.0, 2)
+        acc = round(correct/total * 1.0, 5)
         #print("Accuracy was calculated")
         history["acc"].append(acc)
         history["loss"].append(running_loss)

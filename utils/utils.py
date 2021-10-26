@@ -34,10 +34,11 @@ def preprocess_data(data, shape = (28,28), sigma_noise= [50.,75.,100.],device="c
     y_data = y_data.to(device)
     x_data = torch.Tensor(X)
     x_data = x_data.to(device)
-    ds.update({str(0): TensorDataset(x_data, y_data)})
     for sigma in sigma_noise:
-        x_noise_data = add_noise(x_data, sigma=sigma, device=device)
+        x_noise_data = add_noise(x_data, sigma=sigma, device=device) / 255.0
         pertubed_ds = TensorDataset(x_noise_data,y_data)
         ds.update({str(sigma): pertubed_ds})
+    
+    ds.update({str(0): TensorDataset(x_data / 255.0, y_data)})
     ds_len = len(Y)
     return ds_len, ds

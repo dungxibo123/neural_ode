@@ -64,7 +64,7 @@ class ODENet(nn.Module):
                 running_loss += F.torch.nn.functional.binary_cross_entropy_with_logits(
                     outputs.float(), label.float()).item()
         #        print(f"--> Total {total}\n-->batch_id: {batch_id + 1}")
-        acc = round(correct/total * 1.0 , 2)
+        acc = round(correct/total * 1.0 , 5)
          
         return running_loss,acc
 
@@ -117,7 +117,7 @@ class Network(nn.Module):
                 correct += (predicted == correct_labels).sum().item()
                 running_loss += F.torch.nn.functional.binary_cross_entropy_with_logits(
                     outputs.float(), label.float()).item()
-        acc = round(correct/total * 1.0 , 2)
+        acc = round(correct/total * 1.0 , 5)
         
         return running_loss,acc
 
