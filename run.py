@@ -4,10 +4,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, random_split
+from torch.nn.parallel import DistributedDataParallel as DDP
 import torchvision
 from tqdm import tqdm
 import os.path
 import argparse
+
 import json
 from utils import *
 
@@ -99,8 +101,10 @@ def main(ds_len, ds, name = "mnist_50",batch_size=32,epochs=100, lr=1e-3,data_di
     train_loader = DataLoader(train_set, shuffle=True, batch_size=batch_size)
     val_loader = DataLoader(val_set, shuffle=True, batch_size=data_dis[1])
     loss_fn = torch.nn.functional.binary_cross_entropy_with_logits
-    ode_func = ODEBlock().to(device)
-    ode_model = ODENet(ode_func, device=device).to(device)
+    #ode_func = ODEBlock().to(device)
+    #ode_model = torch.nn.DataParallel(ODENet(ode_func, device=device),device_ids=[0,1], output_device=device)
+    ode_func = torch.DDP(ODEBlock(), output_device=device)
+    ode_model = DDP(ODENet(ode_func,device=device),output_device=device)
     ode_optimizer = torch.optim.Adam(ode_model.parameters(), lr=lr)
     cnn_model = Network().to(device)
     cnn_optimizer = torch.optim.Adam(cnn_model.parameters(), lr=lr)
@@ -110,6 +114,7 @@ def main(ds_len, ds, name = "mnist_50",batch_size=32,epochs=100, lr=1e-3,data_di
     ode_his = train_model(ode_model,
                           ode_optimizer,
                           train_loader, val_loader, loss_fn=loss_fn, epochs=epochs)
+
     save_result(cnn_his,model_name="cnn",ds_name=name, result_dir=result_dir)
     save_result(ode_his,model_name="ode",ds_name=name, result_dir=result_dir)
 
