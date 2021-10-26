@@ -85,7 +85,7 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100):
         history["acc"].append(acc)
         history["loss"].append(running_loss)
         print("Before evaluate")
-        val_loss, val_acc = model.evaluate(val_loader)
+        val_loss, val_acc = model.module.evaluate(val_loader)
         print("After evaluation")
         history["val_loss"].append(val_loss)
         history["val_acc"].append(val_acc)
@@ -104,13 +104,17 @@ def main(ds_len, ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epoc
     val_loader = DataLoader(val_set, shuffle=True, batch_size=data_dis[1])
     loss_fn = torch.nn.functional.binary_cross_entropy_with_logits
     if model_type == "ode": 
-        ode_func = ODEBlock().to(device)
-        model = ODENet(ode_func, device=device).to(device)
+        ode_func = ODEBlock()
+        ode_func = nn.DataParallel(ode_func).to(device)
+        model = ODENet(ode_func.module, device=device)
+        model = nn.DataParallel(model).to(device)
 #    ode_func = DDP(ODEBlock().to(device), output_device=device)
 #    ode_model = DDP(ODENet(ode_func,device=device).to(device),output_device=device)
     elif model_type == "cnn":
-        epochs= epochs * 3
-        model = Network().to(device)
+        epochs= int(epochs * 1.5)
+        model = Network()
+        model = nn.DataParallel(model).to(device)
+        
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     his = train_model(model, 
                       optimizer, 

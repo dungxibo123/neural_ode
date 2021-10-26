@@ -44,7 +44,9 @@ class ODENet(nn.Module):
         self.intergrated_time = torch.Tensor([0.,1.]).float().to(device)
     def forward(self,x):
         out = self.fe(x)
+        self.intergrated_time = self.intergrated_time.to(out.device)
         out = odeint(self.rm, out, self.intergrated_time)[1]
+        
         #out = self.rm(out)
         out = self.fcc(out)
         return out
