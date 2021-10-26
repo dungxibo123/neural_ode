@@ -24,6 +24,7 @@ parser.add_argument("-r", "--result", type=str, default="./result", help="Folder
 parser.add_argument("-tr", "--train", type=int, default=8000, help="Number of train images")
 parser.add_argument("-vl", "--valid", type=int, default=2000, help="Number of validation images")
 parser.add_argument("-lr", "--learning-rate",type=float, default=1e-3, help="Learning rate in optimizer")
+parser.add_argument("-md", "--model", type=str, default="./model", help="Where model going to")
 args = parser.parse_args()
 
 
@@ -32,12 +33,13 @@ device = args.device
 #torch.device("cuda")
 EPOCHS=args.epochs
 BATCH_SIZE=args.batch_size
-DATA_DIR = args.folder
-RESULT_DIR = args.result
+DATA_DIR=args.folder
+RESULT_DIR=args.result
 TRAIN_NUM=args.train
 VALID_NUM=args.valid
 TEST_NUM=60000-TRAIN_NUM-VALID_NUM
 DATA_DISTRIBUTION=[TRAIN_NUM,VALID_NUM,TEST_NUM]
+MODEL_DIR=args.model
 
 
 
@@ -93,7 +95,7 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100):
 
 
 
-def main(ds_len, ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epochs=100, lr=1e-3,data_dis=[8000,2000,50000], device="cpu", result_dir="./result"):
+def main(ds_len, ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epochs=100, lr=1e-3,data_dis=[8000,2000,50000], device="cpu", result_dir="./result", model_dir="./model"):
     print(f"Number of train: {data_dis[0]}\nNumber of validation: {data_dis[1]}")
     train_set, val_set, _ = torch.utils.data.random_split(ds,data_dis)
     #print(type(train_set))
@@ -118,7 +120,11 @@ def main(ds_len, ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epoc
                       epochs=epochs)
 
     save_result(his,model_name=model_type,ds_name=data_name, result_dir=result_dir)
-
+    if data_name.split("_")[-1] == "original":
+        if not os.path.exists(f"{MODEL_DIR}/{model_type}_origin"):
+            os.mkdir(f"{MODEL_DIR}/{model_type}_origin")
+        print("Save original data modeling...")
+        torch.save(model.state_dict(), f"{MODEL_DIR}/{model_type}_origin/{data_name}_origin.pt" ) 
 
 MNIST = torchvision.datasets.MNIST(DATA_DIR,
                                    train=True,
@@ -128,11 +134,12 @@ MNIST = torchvision.datasets.MNIST(DATA_DIR,
 ds_len_, ds_ = preprocess_data(MNIST, device=device)
 
 print(type(ds_))
-for (sigma, ds) in ds_.items():
-    main(ds_len_,ds, device=device, model_type="cnn", data_name=f"mnist_{sigma}",batch_size=BATCH_SIZE, epochs=EPOCHS, data_dis=DATA_DISTRIBUTION, result_dir=RESULT_DIR)
-
+for (sigma, ds) in ds_.items(): 
+    if sigma.split("_")[-1] == "original":
+        main(ds_len_,ds, device=device, model_type="cnn", data_name=f"mnist_{sigma}",batch_size=BATCH_SIZE, epochs=EPOCHS, data_dis=DATA_DISTRIBUTION, result_dir=RESULT_DIR) 
 for (sigma,ds) in ds_.items():
-    main(ds_len_,ds, device=device, model_type="ode", data_name=f"mnist_{sigma}",batch_size=BATCH_SIZE, epochs=EPOCHS, data_dis=DATA_DISTRIBUTION, result_dir=RESULT_DIR)
+    if sigma.split("_")[-1] == "original":
+        main(ds_len_,ds, device=device, model_type="ode", data_name=f"mnist_{sigma}",batch_size=BATCH_SIZE, epochs=EPOCHS, data_dis=DATA_DISTRIBUTION, result_dir=RESULT_DIR)
 
     
     

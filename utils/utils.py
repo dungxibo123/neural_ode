@@ -39,6 +39,6 @@ def preprocess_data(data, shape = (28,28), sigma_noise= [50.,75.,100.],device="c
         pertubed_ds = TensorDataset(x_noise_data,y_data)
         ds.update({str(sigma): pertubed_ds})
     
-    ds.update({str(0): TensorDataset(x_data / 255.0, y_data)})
+    ds.update({"original": TensorDataset(x_data / 255.0, y_data)})
     ds_len = len(Y)
     return ds_len, ds
