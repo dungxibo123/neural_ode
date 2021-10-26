@@ -101,12 +101,13 @@ def main(ds_len, ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epoc
     train_loader = DataLoader(train_set, shuffle=True, batch_size=batch_size)
     val_loader = DataLoader(val_set, shuffle=True, batch_size=data_dis[1])
     loss_fn = torch.nn.functional.binary_cross_entropy_with_logits
-    if model_type =="ode": 
+    if model_type == "ode": 
         ode_func = ODEBlock().to(device)
         model = ODENet(ode_func, device=device).to(device)
 #    ode_func = DDP(ODEBlock().to(device), output_device=device)
 #    ode_model = DDP(ODENet(ode_func,device=device).to(device),output_device=device)
-    else:
+    else if model_type == "cnn":
+        epochs= epochs * 3
         model = Network().to(device)
     optimizer = torch.optim.Adam(ode_model.parameters(), lr=lr)
     his = train_model(model, 
