@@ -93,7 +93,7 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100):
 
 
 
-def main(ds_len, ds, name = "mnist_50",batch_size=32,epochs=100, lr=1e-3,data_dis=[8000,2000,50000], device="cpu", result_dir="./result"):
+def main(ds_len, ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epochs=100, lr=1e-3,data_dis=[8000,2000,50000], device="cpu", result_dir="./result"):
     print(f"Number of train: {data_dis[0]}\nNumber of validation: {data_dis[1]}")
     train_set, val_set, _ = torch.utils.data.random_split(ds,data_dis)
     #print(type(train_set))
@@ -101,22 +101,22 @@ def main(ds_len, ds, name = "mnist_50",batch_size=32,epochs=100, lr=1e-3,data_di
     train_loader = DataLoader(train_set, shuffle=True, batch_size=batch_size)
     val_loader = DataLoader(val_set, shuffle=True, batch_size=data_dis[1])
     loss_fn = torch.nn.functional.binary_cross_entropy_with_logits
-    #ode_func = ODEBlock().to(device)
-    #ode_model = torch.nn.DataParallel(ODENet(ode_func, device=device),device_ids=[0,1], output_device=device)
-    ode_func = torch.DDP(ODEBlock(), output_device=device)
-    ode_model = DDP(ODENet(ode_func,device=device),output_device=device)
-    ode_optimizer = torch.optim.Adam(ode_model.parameters(), lr=lr)
-    cnn_model = Network().to(device)
-    cnn_optimizer = torch.optim.Adam(cnn_model.parameters(), lr=lr)
-    cnn_his = train_model(cnn_model, 
-                         cnn_optimizer,
-                         train_loader, val_loader, loss_fn=loss_fn,epochs=epochs)
-    ode_his = train_model(ode_model,
-                          ode_optimizer,
-                          train_loader, val_loader, loss_fn=loss_fn, epochs=epochs)
+    if model_type =="ode": 
+        ode_func = ODEBlock().to(device)
+        model = ODENet(ode_func, device=device).to(device)
+#    ode_func = DDP(ODEBlock().to(device), output_device=device)
+#    ode_model = DDP(ODENet(ode_func,device=device).to(device),output_device=device)
+    else:
+        model = Network().to(device)
+    optimizer = torch.optim.Adam(ode_model.parameters(), lr=lr)
+    his = train_model(model, 
+                      optimizer, 
+                      train_loader,
+                      val_loader,
+                      loss_fn=loss_fn, 
+                      epochs=epochs)
 
-    save_result(cnn_his,model_name="cnn",ds_name=name, result_dir=result_dir)
-    save_result(ode_his,model_name="ode",ds_name=name, result_dir=result_dir)
+    save_result(cnn_his,model_name=model_type,ds_name=data_name, result_dir=result_dir)
 
 
 MNIST = torchvision.datasets.MNIST(DATA_DIR,
@@ -128,7 +128,10 @@ ds_len_, ds_ = preprocess_data(MNIST, device=device)
 
 print(type(ds_))
 for (sigma, ds) in ds_.items():
-    main(ds_len_,ds, device=device, name=f"mnist_{sigma}",batch_size=BATCH_SIZE, epochs=EPOCHS, data_dis=DATA_DISTRIBUTION, result_dir=RESULT_DIR)
+    main(ds_len_,ds, device=device, model_type="cnn", name=f"mnist_{sigma}",batch_size=BATCH_SIZE, epochs=EPOCHS, data_dis=DATA_DISTRIBUTION, result_dir=RESULT_DIR)
+
+for (sigma,ds) in ds_.items():
+    main(ds_len_,ds, device=device, model_type="ode", name=f"mnist_{sigma}",batch_size=BATCH_SIZE, epochs=EPOCHS, data_dis=DATA_DISTRIBUTION, result_dir=RESULT_DIR)
 
     
     
