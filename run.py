@@ -109,7 +109,7 @@ def main(ds_len, ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epoc
     elif model_type == "cnn":
         epochs= epochs * 3
         model = Network().to(device)
-    optimizer = torch.optim.Adam(ode_model.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     his = train_model(model, 
                       optimizer, 
                       train_loader,
@@ -117,7 +117,7 @@ def main(ds_len, ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epoc
                       loss_fn=loss_fn, 
                       epochs=epochs)
 
-    save_result(cnn_his,model_name=model_type,ds_name=data_name, result_dir=result_dir)
+    save_result(his,model_name=model_type,ds_name=data_name, result_dir=result_dir)
 
 
 MNIST = torchvision.datasets.MNIST(DATA_DIR,
@@ -129,10 +129,10 @@ ds_len_, ds_ = preprocess_data(MNIST, device=device)
 
 print(type(ds_))
 for (sigma, ds) in ds_.items():
-    main(ds_len_,ds, device=device, model_type="cnn", name=f"mnist_{sigma}",batch_size=BATCH_SIZE, epochs=EPOCHS, data_dis=DATA_DISTRIBUTION, result_dir=RESULT_DIR)
+    main(ds_len_,ds, device=device, model_type="cnn", data_name=f"mnist_{sigma}",batch_size=BATCH_SIZE, epochs=EPOCHS, data_dis=DATA_DISTRIBUTION, result_dir=RESULT_DIR)
 
 for (sigma,ds) in ds_.items():
-    main(ds_len_,ds, device=device, model_type="ode", name=f"mnist_{sigma}",batch_size=BATCH_SIZE, epochs=EPOCHS, data_dis=DATA_DISTRIBUTION, result_dir=RESULT_DIR)
+    main(ds_len_,ds, device=device, model_type="ode", data_name=f"mnist_{sigma}",batch_size=BATCH_SIZE, epochs=EPOCHS, data_dis=DATA_DISTRIBUTION, result_dir=RESULT_DIR)
 
     
     
