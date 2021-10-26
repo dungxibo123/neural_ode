@@ -106,7 +106,7 @@ def main(ds_len, ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epoc
         model = ODENet(ode_func, device=device).to(device)
 #    ode_func = DDP(ODEBlock().to(device), output_device=device)
 #    ode_model = DDP(ODENet(ode_func,device=device).to(device),output_device=device)
-    else if model_type == "cnn":
+    elif model_type == "cnn":
         epochs= epochs * 3
         model = Network().to(device)
     optimizer = torch.optim.Adam(ode_model.parameters(), lr=lr)
