@@ -34,11 +34,9 @@ class ODENet(nn.Module):
                                   #1x64x12x12
                                   nn.ReLU()])
         self.rm = func
-        self.fcc = nn.Sequential(*[nn.Conv2d(64,1,3,1,padding=1),
-                                   nn.AdaptiveAvgPool2d(8),
-                                   # 1 x 64 x 8 x 8
+        self.fcc = nn.Sequential(*[nn.AdaptiveAvgPool2d(1),
+                                   # 1 x 64 x 1 x 1
                                    nn.Flatten(),
-                                   # 4096
                                    nn.Linear(64,10),
                                    nn.Softmax()])
         self.intergrated_time = torch.Tensor([0.,1.]).float().to(device)
@@ -91,8 +89,8 @@ class Network(nn.Module):
             nn.ReLU(),
         ])
         self.fcc = nn.Sequential(*[
-            nn.Conv2d(64,1,3,1,padding=1),
-            nn.AdaptiveAvgPool2d(8),
+            #nn.Conv2d(64,1,3,1,padding=1),
+            nn.AdaptiveAvgPool2d(1),
             nn.Flatten(),
             nn.Linear(64,10),
             nn.Softmax()
