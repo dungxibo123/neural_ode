@@ -22,7 +22,7 @@ def add_noise(converted_data, sigma = 10,device="cpu"):
     pertubed_data = converted_data + torch.normal(torch.zeros(converted_data.shape),
                                                   torch.ones(converted_data.shape) * sigma).to(device)
     return pertubed_data
-def preprocess_data(data, shape = (28,28), sigma_noise= [50.,75.,100.],device="cpu"):
+def preprocess_data(data, shape = (28,28), sigma=None,device="cpu"):
     X = []
     Y = []
     ds = {}
@@ -34,11 +34,12 @@ def preprocess_data(data, shape = (28,28), sigma_noise= [50.,75.,100.],device="c
     y_data = y_data.to(device)
     x_data = torch.Tensor(X)
     x_data = x_data.to(device)
-    for sigma in sigma_noise:
+    if sigma:
         x_noise_data = add_noise(x_data, sigma=sigma, device=device) / 255.0
-        pertubed_ds = TensorDataset(x_noise_data,y_data)
-        ds.update({str(sigma): pertubed_ds})
-    
-    ds.update({"original": TensorDataset(x_data / 255.0, y_data)})
+    else:
+        x_noise_data = x_data
+
+    pertubed_ds = TensorDataset(x_noise_data,y_data)
+    #ds.update({"original": TensorDataset(x_data / 255.0, y_data)})
     ds_len = len(Y)
-    return ds_len, ds
+    return ds_len, pertubed_ds

@@ -25,6 +25,7 @@ parser.add_argument("-tr", "--train", type=int, default=8000, help="Number of tr
 parser.add_argument("-vl", "--valid", type=int, default=2000, help="Number of validation images")
 parser.add_argument("-lr", "--learning-rate",type=float, default=1e-3, help="Learning rate in optimizer")
 parser.add_argument("-md", "--model", type=str, default="./model", help="Where model going to")
+parser.add_argument("-pr", "--parallel", type=bool, default=False, help="Parallel or not")
 args = parser.parse_args()
 
 
@@ -40,12 +41,13 @@ VALID_NUM=args.valid
 TEST_NUM=60000-TRAIN_NUM-VALID_NUM
 DATA_DISTRIBUTION=[TRAIN_NUM,VALID_NUM,TEST_NUM]
 MODEL_DIR=args.model
+PARALLEL=args.parallel
 
 
 
 
-def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100):
-    print(model.eval())
+def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, parallel=None):
+    #print(model.eval())
     print(f"Numbers of parameters in model: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
     history = {"loss": [], "acc": [], "val_loss": [], "val_acc": []}
     for epoch_id in tqdm(range(epochs)):
@@ -84,8 +86,11 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100):
         #print("Accuracy was calculated")
         history["acc"].append(acc)
         history["loss"].append(running_loss)
-        print("Before evaluate")
-        val_loss, val_acc = model.module.evaluate(val_loader)
+        print("Before evaluation")
+        if parallel is not None:
+            val_loss, val_acc = model.module.evaluate(val_loader)
+        else:
+            val_loss, val_acc = model.evaluate(val_loader)
         print("After evaluation")
         history["val_loss"].append(val_loss)
         history["val_acc"].append(val_acc)
@@ -95,7 +100,7 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100):
 
 
 
-def main(ds_len, ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epochs=100, lr=1e-3,data_dis=[8000,2000,50000], device="cpu", result_dir="./result", model_dir="./model"):
+def main(ds_len, ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epochs=100, lr=1e-3,data_dis=[8000,2000,50000], device="cpu", result_dir="./result", model_dir="./model", parallel=None):
     print(f"Number of train: {data_dis[0]}\nNumber of validation: {data_dis[1]}")
     train_set, val_set, _ = torch.utils.data.random_split(ds,data_dis)
     #print(type(train_set))
@@ -103,25 +108,40 @@ def main(ds_len, ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epoc
     train_loader = DataLoader(train_set, shuffle=True, batch_size=batch_size)
     val_loader = DataLoader(val_set, shuffle=True, batch_size=data_dis[1])
     loss_fn = torch.nn.functional.binary_cross_entropy_with_logits
-    if model_type == "ode": 
-        ode_func = ODEBlock()
-        ode_func = nn.DataParallel(ode_func).to(device)
-        model = ODENet(ode_func.module, device=device)
-        model = nn.DataParallel(model).to(device)
+    if parallel:
+        if model_type == "ode": 
+            ode_func = ODEBlock(parallel=parallel)
+            ode_func = nn.DataParallel(ode_func).to(device)
+            model = ODENet(ode_func, parallel, device=device)
+            model = nn.DataParallel(model).to(device)
 #    ode_func = DDP(ODEBlock().to(device), output_device=device)
 #    ode_model = DDP(ODENet(ode_func,device=device).to(device),output_device=device)
-    elif model_type == "cnn":
-        epochs= int(epochs * 1.5)
-        model = Network()
-        model = nn.DataParallel(model).to(device)
+        elif model_type == "cnn":
+            epochs= int(epochs * 1.5)
+            model = Network()
+            model = nn.DataParallel(model).to(device)
+    else:
+        if model_type == "ode": 
+            ode_func = ODEBlock().to(device)
+            ode_func = nn.DataParallel(ode_func).to(device)
+            model = ODENet(ode_func.module, device=device)
+            model = nn.DataParallel(model).to(device)
+#    ode_func = DDP(ODEBlock().to(device), output_device=device)
+#    ode_model = DDP(ODENet(ode_func,device=device).to(device),output_device=device)
+        elif model_type == "cnn":
+            epochs= int(epochs * 1.5)
+            model = Network().to(device)
+            #model = nn.DataParallel(model).to(device)
         
+
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     his = train_model(model, 
                       optimizer, 
                       train_loader,
                       val_loader,
                       loss_fn=loss_fn, 
-                      epochs=epochs)
+                      epochs=epochs,
+                      parallel=parallel)
 
     save_result(his,model_name=model_type,ds_name=data_name, result_dir=result_dir)
     if data_name.split("_")[-1] == "original":
@@ -135,15 +155,11 @@ MNIST = torchvision.datasets.MNIST(DATA_DIR,
                                    transform=None,
                                    target_transform=None, download=True)
 
-ds_len_, ds_ = preprocess_data(MNIST, device=device)
+ds_len_, ds_ = preprocess_data(MNIST, sigma=None, device=device)
 
 print(type(ds_))
-for (sigma, ds) in ds_.items(): 
-    if sigma.split("_")[-1] == "original":
-        main(ds_len_,ds, device=device, model_type="cnn", data_name=f"mnist_{sigma}",batch_size=BATCH_SIZE, epochs=EPOCHS, data_dis=DATA_DISTRIBUTION, result_dir=RESULT_DIR) 
-for (sigma,ds) in ds_.items():
-    if sigma.split("_")[-1] == "original":
-        main(ds_len_,ds, device=device, model_type="ode", data_name=f"mnist_{sigma}",batch_size=BATCH_SIZE, epochs=EPOCHS, data_dis=DATA_DISTRIBUTION, result_dir=RESULT_DIR)
+main(ds_len_,ds_, device=device, model_type="cnn", data_name=f"mnist_origin",batch_size=BATCH_SIZE, epochs=EPOCHS, data_dis=DATA_DISTRIBUTION, result_dir=RESULT_DIR, parallel=PARALLEL) 
+main(ds_len_,ds_, device=device, model_type="ode", data_name=f"mnist_origin",batch_size=BATCH_SIZE, epochs=EPOCHS, data_dis=DATA_DISTRIBUTION, result_dir=RESULT_DIR, parallel=PARALLEL)
 
     
     

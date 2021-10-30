@@ -9,8 +9,9 @@ import os
 sys.path.insert(0,os.path.abspath(__file__))
 
 class ODEBlock(nn.Module):
-    def __init__(self):
+    def __init__(self, parallel=None):
         super(ODEBlock,self).__init__()
+        self.parallel = parallel
         self.block = nn.Sequential(*[
             nn.Conv2d(64,64,3,1, padding=1),
             nn.GroupNorm(4,64),
@@ -19,13 +20,13 @@ class ODEBlock(nn.Module):
             nn.GroupNorm(4,64),
             nn.ReLU()
         ]) 
-    def forward(self,t,x):
+    def forward(self,t,x): 
         return self.block(x)
      
 class ODENet(nn.Module):
-    def __init__(self, func, device="cpu"):
+    def __init__(self, func, parallel=False, device="cpu"):
         super(ODENet, self).__init__()
-        assert isinstance(func, ODEBlock), f"argument function is not NeuralODEs model"
+        assert isinstance(func, ODEBlock) or isinstance(func.module,ODEBlock), f"argument function is not NeuralODEs model"
         self.fe = nn.Sequential(*[nn.Conv2d(1,64,3,1),
                                   nn.GroupNorm(4,64),
                                   nn.ReLU(),
@@ -40,10 +41,14 @@ class ODENet(nn.Module):
                                    nn.Linear(64,10),
                                    nn.Softmax()])
         self.intergrated_time = torch.Tensor([0.,1.]).float().to(device)
+        self.parallel = parallel
     def forward(self,x):
         out = self.fe(x)
         self.intergrated_time = self.intergrated_time.to(out.device)
-        out = odeint(self.rm, out, self.intergrated_time)[1]
+        if self.parallel:
+            out = odeint(self.rm.module, out, self.intergrated_time)[1]
+        else:
+            out = odeint(self.rm, out, self.intergrated_time)[1]
         
         #out = self.rm(out)
         out = self.fcc(out)
