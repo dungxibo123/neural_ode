@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from skimage.util import random_noise
 from torch.utils.data import TensorDataset
 import torchvision
 import os.path
@@ -21,6 +22,7 @@ def save_result(his, model_name = "ode",ds_name="mnist_0", result_dir="./result"
 def add_noise(converted_data, sigma = 10,device="cpu"):
     pertubed_data = converted_data + torch.normal(torch.zeros(converted_data.shape),
                                                   torch.ones(converted_data.shape) * sigma).to(device)
+    #pertubed_data = torch.tensor(random_noise(converted_data.cpu(), mode='gaussian', mean=0, var=sigma**2, clip=False)).float().to(device)
     return pertubed_data
 def preprocess_data(data, shape = (28,28), sigma=None,device="cpu"):
     X = []
@@ -36,8 +38,10 @@ def preprocess_data(data, shape = (28,28), sigma=None,device="cpu"):
     x_data = x_data.to(device)
     if sigma:
         x_noise_data = add_noise(x_data, sigma=sigma, device=device) / 255.0
+        print(f"Generating {sigma}-pertubed-dataset")
     else:
         x_noise_data = x_data
+        print(f"Generating {sigma}-pertubed-dataset")
 
     pertubed_ds = TensorDataset(x_noise_data,y_data)
     #ds.update({"original": TensorDataset(x_data / 255.0, y_data)})

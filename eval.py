@@ -16,11 +16,12 @@ import torchvision
 #import matplotlib.pyplot as plt
 from tqdm.notebook import tqdm
 from torchdiffeq import odeint_adjoint as odeint
+from skimage.util import random_noise
 #from jupyterthemes import jtplot
 from utils import *
 #jtplot.style(theme="chesterish")
  # CONSTANT 
-device = "cpu"
+device = "cuda"
 EPOCHS=1
 BATCH_SIZE=32
 IMG_SIZE=(32,32,3)
@@ -56,7 +57,7 @@ def model_state_dict_parallel_convert(state_dict, mode):
     new_state_dict = OrderedDict()
     if mode == 'to_single':
         for k, v in state_dict.items():
-            name = k[7:]  # remove 'module.' of DataParallel
+            name = k.replace("module.","")  # remove 'module.' of DataParallel
             new_state_dict[name] = v
     elif mode == 'to_parallel':
         for k, v in state_dict.items():
@@ -68,27 +69,29 @@ def model_state_dict_parallel_convert(state_dict, mode):
         raise Exception('mode = to_single / to_parallel')
 
     return new_state_dict 
-ode_state_dict = torch.load("./model/ode_origin/mnist_original_origin.pt",map_location=torch.device('cpu'))
+ode_state_dict = torch.load("./model/ode_origin/mnist_origin_origin.pt",map_location=torch.device('cuda'))
 ode_state_dict = model_state_dict_parallel_convert(ode_state_dict, mode="to_single")
 ode_model.load_state_dict(ode_state_dict)
-cnn_state_dict = torch.load("./model/cnn_origin/mnist_original_origin.pt",map_location=torch.device('cpu'))
+cnn_state_dict = torch.load("./model/cnn_origin/mnist_origin_origin.pt",map_location=torch.device('cuda'))
 cnn_state_dict = model_state_dict_parallel_convert(cnn_state_dict, mode="to_single")
 cnn_model.load_state_dict(cnn_state_dict)
 
-
+ode_model = ode_model.to(device)
+cnn_model = cnn_model.to(device)
 # In[5]:
 
 
 
-print(_ds)
+
+#print(_ds)
 
 
 # In[7]:
 
-sigma = [None,50.0,75.0,100.0]
+sigma = [0.00001]
 for key in sigma:    
     _ds_len, _ds = preprocess_data(MNIST, sigma=key, device=device)
-    loader = DataLoader(_ds, batch_size=256)
+    loader = DataLoader(_ds, batch_size=12000)
     _, cnn_acc = cnn_model.evaluate(loader)
     _, ode_acc = ode_model.evaluate(loader)
     print(f"CNNs for {key}-gaussian-pertubed MNIST = {cnn_acc}")
