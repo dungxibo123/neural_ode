@@ -13,12 +13,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import TensorDataset, DataLoader, random_split
 import torchvision
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from tqdm.notebook import tqdm
 from torchdiffeq import odeint_adjoint as odeint
-from jupyterthemes import jtplot
+#from jupyterthemes import jtplot
 from utils import *
-jtplot.style(theme="chesterish")
+#jtplot.style(theme="chesterish")
  # CONSTANT 
 device = "cpu"
 EPOCHS=1
@@ -68,27 +68,27 @@ def model_state_dict_parallel_convert(state_dict, mode):
         raise Exception('mode = to_single / to_parallel')
 
     return new_state_dict 
-cnn_state_dict = torch.load("./model/cnn_origin/mnist_original_origin.pt",map_location=torch.device('cpu'))
-cnn_state_dict = model_state_dict_parallel_convert(cnn_state_dict, mode="to_single")
-cnn_model.load_state_dict(cnn_state_dict)
 ode_state_dict = torch.load("./model/ode_origin/mnist_original_origin.pt",map_location=torch.device('cpu'))
 ode_state_dict = model_state_dict_parallel_convert(ode_state_dict, mode="to_single")
 ode_model.load_state_dict(ode_state_dict)
+cnn_state_dict = torch.load("./model/cnn_origin/mnist_original_origin.pt",map_location=torch.device('cpu'))
+cnn_state_dict = model_state_dict_parallel_convert(cnn_state_dict, mode="to_single")
+cnn_model.load_state_dict(cnn_state_dict)
 
 
 # In[5]:
 
 
-_ds_len, _ds = preprocess_data(MNIST)
 
 print(_ds)
 
 
 # In[7]:
 
-
-for key in _ds.keys():
-    loader = DataLoader(_ds[key], batch_size=10000)
+sigma = [None,50.0,75.0,100.0]
+for key in sigma:    
+    _ds_len, _ds = preprocess_data(MNIST, sigma=key, device=device)
+    loader = DataLoader(_ds, batch_size=256)
     _, cnn_acc = cnn_model.evaluate(loader)
     _, ode_acc = ode_model.evaluate(loader)
     print(f"CNNs for {key}-gaussian-pertubed MNIST = {cnn_acc}")

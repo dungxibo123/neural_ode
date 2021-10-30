@@ -144,11 +144,10 @@ def main(ds_len, ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epoc
                       parallel=parallel)
 
     save_result(his,model_name=model_type,ds_name=data_name, result_dir=result_dir)
-    if data_name.split("_")[-1] == "original":
-        if not os.path.exists(f"{MODEL_DIR}/{model_type}_origin"):
-            os.mkdir(f"{MODEL_DIR}/{model_type}_origin")
-        print("Save original data modeling...")
-        torch.save(model.state_dict(), f"{MODEL_DIR}/{model_type}_origin/{data_name}_origin.pt" ) 
+    if not os.path.exists(f"{MODEL_DIR}/{model_type}_origin"):
+        os.mkdir(f"{MODEL_DIR}/{model_type}_origin")
+    print("Save original data modeling...")
+    torch.save(model.state_dict(), f"{MODEL_DIR}/{model_type}_origin/{data_name}_origin.pt" ) 
 
 MNIST = torchvision.datasets.MNIST(DATA_DIR,
                                    train=True,
