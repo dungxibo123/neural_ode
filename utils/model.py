@@ -46,9 +46,9 @@ class ODENet(nn.Module):
         out = self.fe(x)
         self.intergrated_time = self.intergrated_time.to(out.device)
         if self.parallel:
-            out = odeint(self.rm.module, out, self.intergrated_time)[1]
+            out = odeint(self.rm.module, out, self.intergrated_time, method="euler",options=dict(step_size=0.1))[1]
         else:
-            out = odeint(self.rm, out, self.intergrated_time)[1]
+            out = odeint(self.rm, out, self.intergrated_time, method="euler",options=dict(step_size=0.1))[1]
         
         #out = self.rm(out)
         out = self.fcc(out)
