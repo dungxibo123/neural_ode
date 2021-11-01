@@ -14,10 +14,10 @@ class ODEBlock(nn.Module):
         self.parallel = parallel
         self.block = nn.Sequential(*[
             nn.Conv2d(64,64,3,1, padding=1),
-            nn.GroupNorm(4,64),
+            nn.GroupNorm(32,64),
             nn.ReLU(), 
             nn.Conv2d(64,64,3,1, padding=1),
-            nn.GroupNorm(4,64),
+            nn.GroupNorm(16,64),
             nn.ReLU()
         ]) 
     def forward(self,t,x): 
@@ -28,10 +28,10 @@ class ODENet(nn.Module):
         super(ODENet, self).__init__()
         assert isinstance(func, ODEBlock) or isinstance(func.module,ODEBlock), f"argument function is not NeuralODEs model"
         self.fe = nn.Sequential(*[nn.Conv2d(1,64,3,1),
-                                  nn.GroupNorm(4,64),
+                                  nn.GroupNorm(32,64),
                                   nn.ReLU(),
                                   nn.Conv2d(64,64,4,2),
-                                  nn.GroupNorm(4,64),
+                                  nn.GroupNorm(16,64),
                                   #1x64x12x12
                                   nn.ReLU()])
         self.rm = func
@@ -78,19 +78,19 @@ class Network(nn.Module):
         super(Network, self).__init__()
         self.fe = nn.Sequential(*[
             nn.Conv2d(1,64,3,1),
-            nn.GroupNorm(4,64),
+            nn.GroupNorm(32,64),
             nn.ReLU(),
             nn.Conv2d(64,64,4,2),
-            nn.GroupNorm(4,64),
+            nn.GroupNorm(16,64),
             nn.ReLU()
              
         ])
         self.rm = nn.Sequential(*[
             nn.Conv2d(64,64,3,1, padding=1),
-            nn.GroupNorm(4,64),
+            nn.GroupNorm(32,64),
             nn.ReLU(), 
             nn.Conv2d(64,64,3,1, padding=1),
-            nn.GroupNorm(4,64),
+            nn.GroupNorm(16,64),
             nn.ReLU(),
         ])
         self.fcc = nn.Sequential(*[

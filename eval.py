@@ -70,6 +70,7 @@ def model_state_dict_parallel_convert(state_dict, mode):
 
     return new_state_dict 
 ode_state_dict = torch.load("./model/ode_origin/mnist_origin_origin.pt",map_location=torch.device('cuda'))
+print(type(ode_state_dict))
 ode_state_dict = model_state_dict_parallel_convert(ode_state_dict, mode="to_single")
 ode_model.load_state_dict(ode_state_dict)
 cnn_state_dict = torch.load("./model/cnn_origin/mnist_origin_origin.pt",map_location=torch.device('cuda'))
@@ -87,8 +88,8 @@ cnn_model = cnn_model.to(device)
 
 
 # In[7]:
+sigma=[0.0]
 
-sigma = [0.00001]
 for key in sigma:    
     _ds_len, _ds = preprocess_data(MNIST, sigma=key, device=device)
     loader = DataLoader(_ds, batch_size=12000)

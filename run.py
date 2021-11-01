@@ -48,6 +48,8 @@ PARALLEL=args.parallel
 
 def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, parallel=None):
     #print(model.eval())
+    best_acc = 0
+    best_state_dict = None
     print(f"Numbers of parameters in model: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
     history = {"loss": [], "acc": [], "val_loss": [], "val_acc": []}
     for epoch_id in tqdm(range(epochs)):
@@ -92,10 +94,13 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, 
         else:
             val_loss, val_acc = model.evaluate(val_loader)
         print("After evaluation")
+        #if acc > best_acc:
+        #    best_state_dict = model.state_dict()
+        #    best_acc = acc
         history["val_loss"].append(val_loss)
         history["val_acc"].append(val_acc)
         print(f"Epoch(s) {epoch_id + 1} | loss: {loss} | acc: {acc} | val_loss: {val_loss} | val_acc: {val_acc}")
-    return history
+    return history, best_state_dict
 
 
 
@@ -117,7 +122,7 @@ def main(ds_len, ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epoc
 #    ode_func = DDP(ODEBlock().to(device), output_device=device)
 #    ode_model = DDP(ODENet(ode_func,device=device).to(device),output_device=device)
         elif model_type == "cnn":
-            epochs= int(epochs * 1.5)
+#            epochs= int(epochs * 1.5)
             model = Network()
             model = nn.DataParallel(model).to(device)
     else:
@@ -135,7 +140,7 @@ def main(ds_len, ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epoc
         
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    his = train_model(model, 
+    his,best_state_dict = train_model(model, 
                       optimizer, 
                       train_loader,
                       val_loader,
