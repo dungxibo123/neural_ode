@@ -12,26 +12,34 @@ class ODEBlock(nn.Module):
     def __init__(self, parallel=None):
         super(ODEBlock,self).__init__()
         self.parallel = parallel
-        self.block = nn.Sequential(*[
-            nn.Conv2d(64,64,3,1, padding=1),
-            nn.GroupNorm(4,64),
-            nn.ReLU(), 
-            nn.Conv2d(64,64,3,1, padding=1),
-            nn.GroupNorm(4,64),
-            nn.ReLU()
-        ]) 
+        self.conv1 = nn.Conv2d(64+1,64,3,1, padding=1)
+        self.norm1 = nn.GroupNorm(32,64)
+        self.relu  = nn.ReLU()
+        self.conv2 = nn.Conv2d(64+1,64,3,1, padding=1)
+        self.norm2 = nn.GroupNorm(32,64)
+        
     def forward(self,t,x): 
-        return self.block(x)
+        tt = torch.ones_like(x[:, :1, :, :]) * t
+        out = torch.cat([tt, x], 1)
+        out = self.conv1(out)
+        out = self.norm1(out)
+        out = self.relu(out)
+        out = torch.cat([tt, out], 1)
+        out = self.conv2(out)
+        out = self.norm2(out)
+        out = self.relu(out)
+        
+        return out
      
 class ODENet(nn.Module):
     def __init__(self, func, parallel=False, device="cpu"):
         super(ODENet, self).__init__()
         assert isinstance(func, ODEBlock) or isinstance(func.module,ODEBlock), f"argument function is not NeuralODEs model"
         self.fe = nn.Sequential(*[nn.Conv2d(1,64,3,1),
-                                  nn.GroupNorm(4,64),
+                                  nn.GroupNorm(32,64),
                                   nn.ReLU(),
                                   nn.Conv2d(64,64,4,2),
-                                  nn.GroupNorm(4,64),
+                                  nn.GroupNorm(32,64),
                                   #1x64x12x12
                                   nn.ReLU()])
         self.rm = func
@@ -46,9 +54,9 @@ class ODENet(nn.Module):
         out = self.fe(x)
         self.intergrated_time = self.intergrated_time.to(out.device)
         if self.parallel:
-            out = odeint(self.rm.module, out, self.intergrated_time, method="rk4",options=dict(step_size=0.1))[1]
+            out = odeint(self.rm.module, out, self.intergrated_time, method="euler",options=dict(step_size=0.1), rtol=1e-3, atol=1e-3)[1]
         else:
-            out = odeint(self.rm, out, self.intergrated_time, method="rk4",options=dict(step_size=0.1))[1]
+            out = odeint(self.rm, out, self.intergrated_time, method="euler",options=dict(step_size=0.1), rtol=1e-3, atol=1e-3)[1]
         
         #out = self.rm(out)
         out = self.fcc(out)
@@ -78,19 +86,19 @@ class Network(nn.Module):
         super(Network, self).__init__()
         self.fe = nn.Sequential(*[
             nn.Conv2d(1,64,3,1),
-            nn.GroupNorm(4,64),
+            nn.GroupNorm(32,64),
             nn.ReLU(),
             nn.Conv2d(64,64,4,2),
-            nn.GroupNorm(4,64),
+            nn.GroupNorm(32,64),
             nn.ReLU()
              
         ])
         self.rm = nn.Sequential(*[
             nn.Conv2d(64,64,3,1, padding=1),
-            nn.GroupNorm(4,64),
+            nn.GroupNorm(32,64),
             nn.ReLU(), 
             nn.Conv2d(64,64,3,1, padding=1),
-            nn.GroupNorm(4,64),
+            nn.GroupNorm(32,64),
             nn.ReLU(),
         ])
         self.fcc = nn.Sequential(*[
