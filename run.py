@@ -83,21 +83,19 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, 
             #print("Step")
             running_loss += loss.item() 
             #print("End batch number: {batch_id + 1} in epoch number {epoch_id + 1}")
-        acc = correct / total
-        if acc > best_acc:
-            best_acc = acc
-            best_epoch = epoch_id + 1
-            best_model = model
         #acc = round(correct/total * 1.0, 5)
         #print("Accuracy was calculated")
         history["acc"].append(acc)
         history["loss"].append(running_loss)
-        print("Before evaluation")
         if parallel is not None:
             val_loss, val_acc = model.module.evaluate(val_loader)
         else:
             val_loss, val_acc = model.evaluate(val_loader)
-        print("After evaluation")
+        acc = correct / total
+        if acc > best_acc and val_acc > 0.85:
+            best_acc = acc
+            best_epoch = epoch_id + 1
+            best_model = model
         history["val_loss"].append(val_loss)
         history["val_acc"].append(val_acc)
         #print(f"Epoch(s) {epoch_id + 1} | loss: {loss} | acc: {acc} | val_loss: {val_loss} | val_acc: {val_acc}")
@@ -119,11 +117,11 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, 
 
 def main(ds_len, train_ds, valid_ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epochs=100, lr=1e-3,train_num = 0, valid_num = 0, test_num = 0, device="cpu", result_dir="./result", model_dir="./model", parallel=None):
     print(f"Number of train: {data_dis[0]}\nNumber of validation: {data_dis[1]}")
-    train_set, _ = torch.utils.data.random_split(ds,data_dis)
+    #train_set = torch.utils.data.random_split(ds)
     #print(type(train_set))
     assert isinstance(train_set,torch.utils.data.Dataset)
-    train_loader = DataLoader(train_set, shuffle=True, batch_size=batch_size)
-    val_loader = DataLoader(val_set, shuffle=True, batch_size=data_dis[1])
+    train_loader, _ = DataLoader(train_ds, shuffle=True, batch_size=batch_size, drop_last=True, length=[TRAIN_NUM, ds_len_ - TRAIN_NUM)])
+    val_loader, _  = DataLoader(val_ds, shuffle=True, batch_size=valid_num//10, drop_last=True, length = [VALID_NUM, ds_len_ - VALID_NUM])
     loss_fn = torch.nn.functional.binary_cross_entropy_with_logits
     if parallel:
         if model_type == "ode": 
