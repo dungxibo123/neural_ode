@@ -88,7 +88,7 @@ cnn_model = cnn_model.to(device)
 
 # In[7]:
 
-sigma = [0.00001]
+sigma = [None, 1e-5, 1e-7, 50.0, 70.0]
 for key in sigma:    
     _ds_len, _ds = preprocess_data(MNIST, sigma=key, device=device)
     loader = DataLoader(_ds, batch_size=12000)

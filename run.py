@@ -49,6 +49,7 @@ PARALLEL=args.parallel
 def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, parallel=None):
     #print(model.eval())
     print(f"Numbers of parameters in model: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
+    best_model, best_acc, best_epoch = None, 0, 0
     history = {"loss": [], "acc": [], "val_loss": [], "val_acc": []}
     for epoch_id in tqdm(range(epochs)):
         total = 0
@@ -81,8 +82,13 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, 
             optimizer.step()
             #print("Step")
             running_loss += loss.item() 
-            #print(f"End batch number: {batch_id + 1} in epoch number {epoch_id + 1}")
-        acc = round(correct/total * 1.0, 5)
+            #print("End batch number: {batch_id + 1} in epoch number {epoch_id + 1}")
+        acc = correct / total
+        if acc > best_acc:
+            best_acc = acc
+            best_epoch = epoch_id + 1
+            best_model = model
+        #acc = round(correct/total * 1.0, 5)
         #print("Accuracy was calculated")
         history["acc"].append(acc)
         history["loss"].append(running_loss)
@@ -94,8 +100,12 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, 
         print("After evaluation")
         history["val_loss"].append(val_loss)
         history["val_acc"].append(val_acc)
-        print(f"Epoch(s) {epoch_id + 1} | loss: {loss} | acc: {acc} | val_loss: {val_loss} | val_acc: {val_acc}")
-    return history
+        #print(f"Epoch(s) {epoch_id + 1} | loss: {loss} | acc: {acc} | val_loss: {val_loss} | val_acc: {val_acc}")
+        print("Epoch(s) {:04d}/{:04d} | acc: {:.05f} | loss: {:.09f} | val_acc: {:.05f} | val_loss: {:.09f} | Best epochs: {:04d} | Best acc: {:09f}".format(
+            epoch_id + 1, epochs, acc, running_loss, val_acc, val_loss, best_epoch, best_acc
+            ))
+
+    return history, best_model, best_epoch, best_acc
 
 
 
@@ -155,7 +165,7 @@ MNIST = torchvision.datasets.MNIST(DATA_DIR,
                                    target_transform=None, download=True)
 
 ds_len_, ds_ = preprocess_data(MNIST, sigma=None, device=device)
-
+ds_len_, pertubed_ds_ = preprocess_data(MNIST, sigma=30.0, device=device, train=True)
 print(type(ds_))
 main(ds_len_,ds_, device=device, model_type="cnn", data_name=f"mnist_origin",batch_size=BATCH_SIZE, epochs=EPOCHS, data_dis=DATA_DISTRIBUTION, result_dir=RESULT_DIR, parallel=PARALLEL) 
 main(ds_len_,ds_, device=device, model_type="ode", data_name=f"mnist_origin",batch_size=BATCH_SIZE, epochs=EPOCHS, data_dis=DATA_DISTRIBUTION, result_dir=RESULT_DIR, parallel=PARALLEL)
