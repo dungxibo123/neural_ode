@@ -101,6 +101,13 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, 
         history["val_loss"].append(val_loss)
         history["val_acc"].append(val_acc)
         #print(f"Epoch(s) {epoch_id + 1} | loss: {loss} | acc: {acc} | val_loss: {val_loss} | val_acc: {val_acc}")
+        checkpoint = {
+            'epoch': epoch_id + 1,
+            'model': model,
+            'best_epoch': best_epoch,
+            'optimizer': optimizer.state_dict()
+        }
+        torch.save(checkpoint, "./checkpoints")
         print("Epoch(s) {:04d}/{:04d} | acc: {:.05f} | loss: {:.09f} | val_acc: {:.05f} | val_loss: {:.09f} | Best epochs: {:04d} | Best acc: {:09f}".format(
             epoch_id + 1, epochs, acc, running_loss, val_acc, val_loss, best_epoch, best_acc
             ))
@@ -110,9 +117,9 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, 
 
 
 
-def main(ds_len, ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epochs=100, lr=1e-3,data_dis=[8000,2000,50000], device="cpu", result_dir="./result", model_dir="./model", parallel=None):
+def main(ds_len, train_ds, valid_ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epochs=100, lr=1e-3,train_num = 0, valid_num = 0, test_num = 0, device="cpu", result_dir="./result", model_dir="./model", parallel=None):
     print(f"Number of train: {data_dis[0]}\nNumber of validation: {data_dis[1]}")
-    train_set, val_set, _ = torch.utils.data.random_split(ds,data_dis)
+    train_set, _ = torch.utils.data.random_split(ds,data_dis)
     #print(type(train_set))
     assert isinstance(train_set,torch.utils.data.Dataset)
     train_loader = DataLoader(train_set, shuffle=True, batch_size=batch_size)
@@ -145,7 +152,7 @@ def main(ds_len, ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epoc
         
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    his = train_model(model, 
+    his, model, epoch, acc = train_model(model, 
                       optimizer, 
                       train_loader,
                       val_loader,
@@ -153,7 +160,7 @@ def main(ds_len, ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epoc
                       epochs=epochs,
                       parallel=parallel)
 
-    save_result(his,model_name=model_type,ds_name=data_name, result_dir=result_dir)
+    save_result(model,model_name=model_type,ds_name=data_name, result_dir=result_dir)
     if not os.path.exists(f"{MODEL_DIR}/{model_type}_origin"):
         os.mkdir(f"{MODEL_DIR}/{model_type}_origin")
     print("Save original data modeling...")
@@ -165,11 +172,10 @@ MNIST = torchvision.datasets.MNIST(DATA_DIR,
                                    target_transform=None, download=True)
 
 ds_len_, ds_ = preprocess_data(MNIST, sigma=None, device=device)
-ds_len_, pertubed_ds_ = preprocess_data(MNIST, sigma=30.0, device=device, train=True)
+ds_len_, pertubed_ds_ = preprocess_data(MNIST, sigma=[20.0,30.0,40.0], device=device, train=True)
 print(type(ds_))
-main(ds_len_,ds_, device=device, model_type="cnn", data_name=f"mnist_origin",batch_size=BATCH_SIZE, epochs=EPOCHS, data_dis=DATA_DISTRIBUTION, result_dir=RESULT_DIR, parallel=PARALLEL) 
-main(ds_len_,ds_, device=device, model_type="ode", data_name=f"mnist_origin",batch_size=BATCH_SIZE, epochs=EPOCHS, data_dis=DATA_DISTRIBUTION, result_dir=RESULT_DIR, parallel=PARALLEL)
-
+main(ds_len_,ds_, pertubed_ds_, device=device, model_type="cnn", data_name=f"mnist_origin",batch_size=BATCH_SIZE, epochs=EPOCHS, train_num=TRAIN_NUM, valid_num=VALID_NUM, test_num=TEST_NUM, result_dir=RESULT_DIR, parallel=PARALLEL) 
+main(ds_len_,ds_, pertubed_ds_, device=device, model_type="ode", data_name=f"mnist_origin",batch_size=BATCH_SIZE, epochs=EPOCHS, train_num=TRAIN_NUM, valid_num=VALID_NUM, test_num=TEST_NUM, result_dir=RESULT_DIR, parallel=PARALLEL) 
     
     
 

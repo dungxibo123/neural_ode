@@ -24,26 +24,41 @@ def add_noise(converted_data, sigma = 10,device="cpu"):
                                                   torch.ones(converted_data.shape) * sigma).to(device)
     #pertubed_data = torch.tensor(random_noise(converted_data.cpu(), mode='gaussian', mean=0, var=sigma**2, clip=False)).float().to(device)
     return pertubed_data
-def preprocess_data(data, shape = (28,28), sigma=None,device="cpu"):
-    X = []
-    Y = []
-    ds = {}
-    sigma_noise = [50.,75.,100.]
-    for data_idx, (x,y) in list(enumerate(data)):
-        X.append(np.array(x).reshape((1,shape[0],shape[0])))
-        Y.append(y)
-    y_data = F.one_hot(torch.Tensor(Y).to(torch.int64), num_classes=10)
-    y_data = y_data.to(device)
-    x_data = torch.Tensor(X)
-    x_data = x_data.to(device)
-    if sigma:
-        x_noise_data = add_noise(x_data, sigma=sigma, device=device) / 255.0
-        print(f"Generating {sigma}-pertubed-dataset")
-    else:
-        x_noise_data = x_data
-        print(f"Generating {sigma}-pertubed-dataset")
+def preprocess_data(data, shape = (28,28), sigma=None,device="cpu", train=False):
+    if not train:
+        assert type(sigma) == type(list()) or type(sigma) == type(None), f"if train=False, the type(sigma) must be return a list object or NoneType object, but return {type(sigma)}"
+        X = []
+        Y = []
+        ds = {}
+        sigma_noise = [50.,75.,100.]
+        for data_idx, (x,y) in list(enumerate(data)):
+            X.append(np.array(x).reshape((1,shape[0],shape[0])))
+            Y.append(y)
+        y_data = F.one_hot(torch.Tensor(Y).to(torch.int64), num_classes=10)
+        y_data = y_data.to(device)
+        x_data = torch.Tensor(X)
+        x_data = x_data.to(device)
+        if sigma:
+            x_noise_data = add_noise(x_data, sigma=sigma, device=device) / 255.0
+            print(f"Generating {sigma}-pertubed-dataset")
+        else:
+            x_noise_data = x_data
+            print(f"Generating {sigma}-pertubed-dataset")
 
-    pertubed_ds = TensorDataset(x_noise_data,y_data)
-    #ds.update({"original": TensorDataset(x_data / 255.0, y_data)})
-    ds_len = len(Y)
-    return ds_len, pertubed_ds
+        pertubed_ds = TensorDataset(x_noise_data,y_data)
+        #ds.update({"original": TensorDataset(x_data / 255.0, y_data)})
+        ds_len = len(Y)
+        return ds_len, pertubed_ds
+    else:
+        import random
+        X = []
+        Y = []
+        for data_idx, (x, y) in list(enumerate(data)):
+            std = random.choice(sigma)
+            X.append((np.array(x) + np.random.normal(np.zeros_like(x), sigma * np.ones_like(x))).reshape(1,shape[0],shape[0]))
+            Y.append(y)
+        y_data = F.one_hot(torch.Tensor(Y).to(torch.int64), num_classes=10)
+        y_data = y_data.to(device)
+        x_data = torch.Tensor(X)
+        x_data = x_data.to(device)
+        return ds_, TensorDataset(x_data,y_data) 
