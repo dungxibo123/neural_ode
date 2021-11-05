@@ -32,10 +32,10 @@ class ODEBlock(nn.Module):
         return out
      
 class ODENet(nn.Module):
-    def __init__(self, func, parallel=False, device="cpu"):
+    def __init__(self, func, parallel=False, input_dim=1, device="cpu"):
         super(ODENet, self).__init__()
         assert isinstance(func, ODEBlock) or isinstance(func.module,ODEBlock), f"argument function is not NeuralODEs model"
-        self.fe = nn.Sequential(*[nn.Conv2d(1,64,3,1),
+        self.fe = nn.Sequential(*[nn.Conv2d(input_dim,64,3,1),
                                   nn.GroupNorm(32,64),
                                   nn.ReLU(),
                                   nn.Conv2d(64,64,4,2),
@@ -83,10 +83,10 @@ class ODENet(nn.Module):
         return running_loss,acc
 
 class Network(nn.Module):
-    def __init__(self):
+    def __init__(self, input_dim=1):
         super(Network, self).__init__()
         self.fe = nn.Sequential(*[
-            nn.Conv2d(1,64,3,1),
+            nn.Conv2d(input_dim,64,3,1),
             nn.GroupNorm(32,64),
             nn.ReLU(),
             nn.Conv2d(64,64,4,2),

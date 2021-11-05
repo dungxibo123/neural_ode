@@ -120,13 +120,15 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, 
 
 
 
-def main(ds_len, train_ds, valid_ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epochs=100, lr=1e-3,train_num = 0, valid_num = 0, test_num = 0, device="cpu", result_dir="./result", model_dir="./model", parallel=None):
-    print(f"Number of train: {train_num}\nNumber of validation: {valid_num}")
+def main(ds_len, train_ds, valid_ds,model_type = "ode",data_name = "mnist",batch_size=32,epochs=100, lr=1e-3,train_num = 0, valid_num = 0, test_num = 0, device="cpu", result_dir="./result", model_dir="./model", parallel=None):
+    #print(f"Number of train: {train_num}\nNumber of validation: {valid_num}")
     #train_set = torch.utils.data.random_split(ds)
     #print(type(train_set))
     #assert isinstance(train_set,torch.utils.data.Dataset)
     #train_ds, _ = torch.utils.data.random_split(train_ds, lengths=[TRAIN_NUM, ds_len - TRAIN_NUM])
     #valid_ds, _ = torch.utils.data.random_split(valid_ds, lengths=[VALID_NUM, ds_len - VALID_NUM])
+    if data_name="mnist": input_dim=1
+    elif data_name="svhn": input_dim=3
     print(len(train_ds))
     train_loader = DataLoader(train_ds, shuffle=True, batch_size=batch_size, drop_last=True)
     val_loader  = DataLoader(valid_ds, shuffle=True, batch_size= batch_size * 16, drop_last=True)
@@ -135,25 +137,25 @@ def main(ds_len, train_ds, valid_ds,model_type = "ode",data_name = "mnist_50",ba
         if model_type == "ode": 
             ode_func = ODEBlock(parallel=parallel)
             ode_func = nn.DataParallel(ode_func).to(device)
-            model = ODENet(ode_func, parallel, device=device)
+            model = ODENet(ode_func, parallel,input_dim=input_dim, device=device)
             model = nn.DataParallel(model).to(device)
 #    ode_func = DDP(ODEBlock().to(device), output_device=device)
 #    ode_model = DDP(ODENet(ode_func,device=device).to(device),output_device=device)
         elif model_type == "cnn":
 #            epochs= int(epochs * 1.5)
-            model = Network()
+            model = Network(input_dim)
             model = nn.DataParallel(model).to(device)
     else:
         if model_type == "ode": 
             ode_func = ODEBlock().to(device)
             ode_func = nn.DataParallel(ode_func).to(device)
-            model = ODENet(ode_func.module, device=device)
+            model = ODENet(ode_func.module, input_dim=input_dim, device=device)
             model = nn.DataParallel(model).to(device)
 #    ode_func = DDP(ODEBlock().to(device), output_device=device)
 #    ode_model = DDP(ODENet(ode_func,device=device).to(device),output_device=device)
         elif model_type == "cnn":
             epochs= int(epochs * 1.5)
-            model = Network().to(device)
+            model = Network(input_dim).to(device)
             #model = nn.DataParallel(model).to(device)
         
 
@@ -196,8 +198,8 @@ for k in sigma:
     evaluation["ode"].update({k: []})
     evaluation["cnn"].update({k: []})
 for i in range(5):
-    cnn_model = main(ds_len_,ds_, pertubed_ds_, device=device, model_type="cnn", data_name=f"mnist_origin",batch_size=BATCH_SIZE, epochs=EPOCHS, train_num=TRAIN_NUM, valid_num=VALID_NUM, test_num=TEST_NUM, result_dir=RESULT_DIR, parallel=PARALLEL) 
-    ode_model = main(ds_len_,ds_, pertubed_ds_, device=device, model_type="ode", data_name=f"mnist_origin",batch_size=BATCH_SIZE, epochs=EPOCHS, train_num=TRAIN_NUM, valid_num=VALID_NUM, test_num=TEST_NUM, result_dir=RESULT_DIR, parallel=PARALLEL) 
+    cnn_model = main(ds_len_,ds_, pertubed_ds_, device=device, model_type="cnn", data_name=f"svhn",batch_size=BATCH_SIZE, epochs=EPOCHS, train_num=TRAIN_NUM, valid_num=VALID_NUM, test_num=TEST_NUM, result_dir=RESULT_DIR, parallel=PARALLEL) 
+    ode_model = main(ds_len_,ds_, pertubed_ds_, device=device, model_type="ode", data_name=f"svhn",batch_size=BATCH_SIZE, epochs=EPOCHS, train_num=TRAIN_NUM, valid_num=VALID_NUM, test_num=TEST_NUM, result_dir=RESULT_DIR, parallel=PARALLEL) 
     for k,l in loaders:
         if isinstance(cnn_model, nn.DataParallel): cnn_model = cnn_model.module
         if isinstance(ode_model, nn.DataParallel): ode_model = ode_model.module
