@@ -32,7 +32,7 @@ def preprocess_data(data, shape = (28,28), sigma=None,device="cpu", train=False)
         ds = {}
         sigma_noise = [50.,75.,100.]
         for data_idx, (x,y) in list(enumerate(data)):
-            X.append(np.array(x).reshape((1,shape[0],shape[0])))
+            X.append(np.array(x).reshape((3,shape[0],shape[0])))
             Y.append(y)
         y_data = F.one_hot(torch.Tensor(Y).to(torch.int64), num_classes=10)
         y_data = y_data.to(device)
@@ -56,7 +56,7 @@ def preprocess_data(data, shape = (28,28), sigma=None,device="cpu", train=False)
         for data_idx, (x, y) in list(enumerate(data)):
             std = random.choice(sigma)
             noise_x = (np.array(x) + np.random.normal(np.zeros_like(np.array(x)), np.ones_like(np.array(x)) * std))
-            X.append(noise_x.reshape(1,shape[0],shape[0]))
+            X.append(noise_x.reshape(3,shape[0],shape[0]))
             Y.append(y)
         y_data = F.one_hot(torch.Tensor(Y).to(torch.int64), num_classes=10)
         y_data = y_data.to(device)

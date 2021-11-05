@@ -127,8 +127,8 @@ def main(ds_len, train_ds, valid_ds,model_type = "ode",data_name = "mnist",batch
     #assert isinstance(train_set,torch.utils.data.Dataset)
     #train_ds, _ = torch.utils.data.random_split(train_ds, lengths=[TRAIN_NUM, ds_len - TRAIN_NUM])
     #valid_ds, _ = torch.utils.data.random_split(valid_ds, lengths=[VALID_NUM, ds_len - VALID_NUM])
-    if data_name="mnist": input_dim=1
-    elif data_name="svhn": input_dim=3
+    if data_name=="mnist": input_dim=1
+    elif data_name=="svhn": input_dim=3
     print(len(train_ds))
     train_loader = DataLoader(train_ds, shuffle=True, batch_size=batch_size, drop_last=True)
     val_loader  = DataLoader(valid_ds, shuffle=True, batch_size= batch_size * 16, drop_last=True)
@@ -175,17 +175,16 @@ def main(ds_len, train_ds, valid_ds,model_type = "ode",data_name = "mnist",batch
     torch.save(model.state_dict(), f"{MODEL_DIR}/{model_type}_origin/{data_name}_origin.pt" ) 
     return model
 
-MNIST = torchvision.datasets.MNIST(DATA_DIR,
-                                   train=True,
+SVHN = torchvision.datasets.SVHN(DATA_DIR,
                                    transform=None,
                                    target_transform=None, download=True)
 
-ds_len_, ds_ = preprocess_data(MNIST, sigma=None, device=device)
-ds_len_, pertubed_ds_ = preprocess_data(MNIST, sigma=[20.0,30.0,40.0], device=device, train=True)
+ds_len_, ds_ = preprocess_data(SVHN, shape=(32,32), sigma=None, device=device)
+ds_len_, pertubed_ds_ = preprocess_data(SVHN, shape=(32,32) , sigma=[20.0,30.0,40.0], device=device, train=True)
 print(type(ds_))
     
 sigma = [None, 1e-7, 50.0, 75.0, 100.0]
-loaders = [(key,DataLoader(preprocess_data(MNIST, sigma=key, device=device, train=False)[1], batch_size=12000)) for key in sigma]
+loaders = [(key,DataLoader(preprocess_data(SVHN, shape=(32,32), sigma=key, device=device, train=False)[1], batch_size=12000)) for key in sigma]
 evaluation = {
     "ode": {
         
@@ -206,8 +205,8 @@ for i in range(5):
         _, cnn_acc = cnn_model.evaluate(l) 
         _, ode_acc = ode_model.evaluate(l) 
         
-        print(f"CNNs for {k}-gaussian-pertubed MNIST = {cnn_acc}")
-        print(f"ODEs for {k}-gaussian-pertubed MNIST = {ode_acc}")
+        print(f"CNNs for {k}-gaussian-pertubed SVHN = {cnn_acc}")
+        print(f"ODEs for {k}-gaussian-pertubed SVHN = {ode_acc}")
         
 
         evaluation["ode"][k].append(ode_acc)
