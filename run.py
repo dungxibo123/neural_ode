@@ -169,6 +169,7 @@ def main(ds_len, train_ds, valid_ds,model_type = "ode",data_name = "mnist_50",ba
         os.mkdir(f"{MODEL_DIR}/{model_type}_origin")
     print("Save original data modeling...")
     torch.save(model.state_dict(), f"{MODEL_DIR}/{model_type}_origin/{data_name}_origin.pt" ) 
+    return model
 
 MNIST = torchvision.datasets.MNIST(DATA_DIR,
                                    train=True,
@@ -178,11 +179,35 @@ MNIST = torchvision.datasets.MNIST(DATA_DIR,
 ds_len_, ds_ = preprocess_data(MNIST, sigma=None, device=device)
 ds_len_, pertubed_ds_ = preprocess_data(MNIST, sigma=[20.0,30.0,40.0], device=device, train=True)
 print(type(ds_))
-main(ds_len_,ds_, pertubed_ds_, device=device, model_type="cnn", data_name=f"mnist_origin",batch_size=BATCH_SIZE, epochs=EPOCHS, train_num=TRAIN_NUM, valid_num=VALID_NUM, test_num=TEST_NUM, result_dir=RESULT_DIR, parallel=PARALLEL) 
-main(ds_len_,ds_, pertubed_ds_, device=device, model_type="ode", data_name=f"mnist_origin",batch_size=BATCH_SIZE, epochs=EPOCHS, train_num=TRAIN_NUM, valid_num=VALID_NUM, test_num=TEST_NUM, result_dir=RESULT_DIR, parallel=PARALLEL) 
     
-    
+sigma = [None, 1e-7, 50.0, 75.0, 100.0]
+loaders = [(key,DataLoader(preprocess_data(MNIST, sigma=key, device=device, train=False)[1], batch_size=12000) for key in sigma)]
+evaluation = {
+    "ode": {
+        
+    },
+    "cnn": {
 
+    }
+}
+for k in sigma:
+    evaluation["ode"].update({key: []})
+    evaluation["cnn"].update({key: []})
+for i in range(5):
+    cnn_model = main(ds_len_,ds_, pertubed_ds_, device=device, model_type="cnn", data_name=f"mnist_origin",batch_size=BATCH_SIZE, epochs=EPOCHS, train_num=TRAIN_NUM, valid_num=VALID_NUM, test_num=TEST_NUM, result_dir=RESULT_DIR, parallel=PARALLEL) 
+    ode_model = main(ds_len_,ds_, pertubed_ds_, device=device, model_type="ode", data_name=f"mnist_origin",batch_size=BATCH_SIZE, epochs=EPOCHS, train_num=TRAIN_NUM, valid_num=VALID_NUM, test_num=TEST_NUM, result_dir=RESULT_DIR, parallel=PARALLEL) 
+    for k,l in loaders:
+        if isinstance(cnn_model, DataParallel): cnn_model = cnn_model.module
+        if isinstance(ode_model, DataParallel): ode_model = ode_model.module
+        _, cnn_acc = cnn_model.evaluate(l) 
+        _, ode_acc = ode_model.evaluate(l) 
+        
+        print(f"CNNs for {k}-gaussian-pertubed MNIST = {cnn_acc}")
+        print(f"ODEs for {k}-gaussian-pertubed MNIST = {ode_acc}")
+        
 
+        evaluation["ode"][k].append(ode_acc)
+        evaluation["cnn"][k].append(cnn_acc)
 
-
+with open('./result/evaluate.json', 'w') as fp:
+    json.dump(evaluation, fp)
