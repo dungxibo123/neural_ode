@@ -65,9 +65,10 @@ class ODENet(nn.Module):
         correct = 0
         total = 0 
         running_loss = 0
-        
+        count = 0        
         with torch.no_grad():
             for batch_id , test_data in enumerate(test_loader,0):
+                count += 1
                 data, label = test_data
                 outputs = self.forward(data)
                 _, correct_labels = torch.max(label, 1) 
@@ -77,8 +78,8 @@ class ODENet(nn.Module):
                 running_loss += F.torch.nn.functional.binary_cross_entropy_with_logits(
                     outputs.float(), label.float()).item()
         #        print(f"--> Total {total}\n-->batch_id: {batch_id + 1}")
-        acc = round(correct/total * 1.0 , 5)
-         
+        acc = correct/total
+        running_loss /= count 
         return running_loss,acc
 
 class Network(nn.Module):
@@ -119,9 +120,10 @@ class Network(nn.Module):
         correct = 0
         total = 0 
         running_loss = 0
-        
+        count = 0 
         with torch.no_grad():
             for test_data in test_loader:
+                count += 1
                 data, label = test_data
                 outputs = self.forward(data)
                 _, correct_labels = torch.max(label, 1) 
@@ -130,7 +132,8 @@ class Network(nn.Module):
                 correct += (predicted == correct_labels).sum().item()
                 running_loss += F.torch.nn.functional.binary_cross_entropy_with_logits(
                     outputs.float(), label.float()).item()
-        acc = round(correct/total * 1.0 , 5)
+        acc = correct / total
+        running_loss /= count
         
         return running_loss,acc
 

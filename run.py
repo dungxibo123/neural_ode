@@ -57,7 +57,8 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, 
         running_loss = 0
         print(f"Start epoch number: {epoch_id + 1}")
 #        print(next(enumerate(train_loader,0)))
-        for batch_id, data in list(enumerate(train_loader, 0)):
+        loads = list(enumerate(train_loader,0))
+        for batch_id, data in loads:
 #            print("Go here please")
             # get the inputs; data is a list of [inputs, labels]
             #print(f"Start batch number: {batch_id + 1} in epoch number: {epoch_id + 1}")
@@ -101,6 +102,7 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, 
             best_model = model
         history["val_loss"].append(val_loss)
         history["val_acc"].append(val_acc)
+        running_loss /= len(loads)
         #print(f"Epoch(s) {epoch_id + 1} | loss: {loss} | acc: {acc} | val_loss: {val_loss} | val_acc: {val_acc}")
         checkpoint = {
             'epoch': epoch_id + 1,
@@ -181,7 +183,7 @@ ds_len_, pertubed_ds_ = preprocess_data(MNIST, sigma=[20.0,30.0,40.0], device=de
 print(type(ds_))
     
 sigma = [None, 1e-7, 50.0, 75.0, 100.0]
-loaders = [(key,DataLoader(preprocess_data(MNIST, sigma=key, device=device, train=False)[1], batch_size=12000) for key in sigma)]
+loaders = [(key,DataLoader(preprocess_data(MNIST, sigma=key, device=device, train=False)[1], batch_size=12000)) for key in sigma]
 evaluation = {
     "ode": {
         
@@ -191,14 +193,14 @@ evaluation = {
     }
 }
 for k in sigma:
-    evaluation["ode"].update({key: []})
-    evaluation["cnn"].update({key: []})
+    evaluation["ode"].update({k: []})
+    evaluation["cnn"].update({k: []})
 for i in range(5):
     cnn_model = main(ds_len_,ds_, pertubed_ds_, device=device, model_type="cnn", data_name=f"mnist_origin",batch_size=BATCH_SIZE, epochs=EPOCHS, train_num=TRAIN_NUM, valid_num=VALID_NUM, test_num=TEST_NUM, result_dir=RESULT_DIR, parallel=PARALLEL) 
     ode_model = main(ds_len_,ds_, pertubed_ds_, device=device, model_type="ode", data_name=f"mnist_origin",batch_size=BATCH_SIZE, epochs=EPOCHS, train_num=TRAIN_NUM, valid_num=VALID_NUM, test_num=TEST_NUM, result_dir=RESULT_DIR, parallel=PARALLEL) 
     for k,l in loaders:
-        if isinstance(cnn_model, DataParallel): cnn_model = cnn_model.module
-        if isinstance(ode_model, DataParallel): ode_model = ode_model.module
+        if isinstance(cnn_model, nn.DataParallel): cnn_model = cnn_model.module
+        if isinstance(ode_model, nn.DataParallel): ode_model = ode_model.module
         _, cnn_acc = cnn_model.evaluate(l) 
         _, ode_acc = ode_model.evaluate(l) 
         
