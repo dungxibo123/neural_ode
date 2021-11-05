@@ -88,9 +88,9 @@ cnn_model = cnn_model.to(device)
 
 # In[7]:
 
-sigma = [None, 1e-5, 1e-7, 50.0, 70.0]
+sigma = [None, 1e-7, 50.0, 75.0, 100.0]
 for key in sigma:    
-    _ds_len, _ds = preprocess_data(MNIST, sigma=key, device=device)
+    _ds_len, _ds = preprocess_data(MNIST, sigma=key, device=device, train=False)
     loader = DataLoader(_ds, batch_size=12000)
     _, cnn_acc = cnn_model.evaluate(loader)
     _, ode_acc = ode_model.evaluate(loader)

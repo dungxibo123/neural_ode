@@ -56,10 +56,13 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, 
         correct = 0
         running_loss = 0
         print(f"Start epoch number: {epoch_id + 1}")
-        for batch_id, data in enumerate(train_loader, 0):
+#        print(next(enumerate(train_loader,0)))
+        for batch_id, data in list(enumerate(train_loader, 0)):
+#            print("Go here please")
             # get the inputs; data is a list of [inputs, labels]
             #print(f"Start batch number: {batch_id + 1} in epoch number: {epoch_id + 1}")
             inputs, labels = data
+#            print(f"This is labels: {labels}\n\n\n\n")
             #print(f"Get data done")
             # zero the parameter gradients
             optimizer.zero_grad()
@@ -84,6 +87,7 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, 
             running_loss += loss.item() 
             #print("End batch number: {batch_id + 1} in epoch number {epoch_id + 1}")
         #acc = round(correct/total * 1.0, 5)
+        acc = correct / total
         #print("Accuracy was calculated")
         history["acc"].append(acc)
         history["loss"].append(running_loss)
@@ -91,7 +95,6 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, 
             val_loss, val_acc = model.module.evaluate(val_loader)
         else:
             val_loss, val_acc = model.evaluate(val_loader)
-        acc = correct / total
         if acc > best_acc and val_acc > 0.85:
             best_acc = acc
             best_epoch = epoch_id + 1
@@ -105,7 +108,7 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, 
             'best_epoch': best_epoch,
             'optimizer': optimizer.state_dict()
         }
-        torch.save(checkpoint, "./checkpoints")
+        torch.save(checkpoint, "./checkpoints/checkpoint.pt")
         print("Epoch(s) {:04d}/{:04d} | acc: {:.05f} | loss: {:.09f} | val_acc: {:.05f} | val_loss: {:.09f} | Best epochs: {:04d} | Best acc: {:09f}".format(
             epoch_id + 1, epochs, acc, running_loss, val_acc, val_loss, best_epoch, best_acc
             ))
@@ -116,12 +119,15 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, 
 
 
 def main(ds_len, train_ds, valid_ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epochs=100, lr=1e-3,train_num = 0, valid_num = 0, test_num = 0, device="cpu", result_dir="./result", model_dir="./model", parallel=None):
-    print(f"Number of train: {data_dis[0]}\nNumber of validation: {data_dis[1]}")
+    print(f"Number of train: {train_num}\nNumber of validation: {valid_num}")
     #train_set = torch.utils.data.random_split(ds)
     #print(type(train_set))
-    assert isinstance(train_set,torch.utils.data.Dataset)
-    train_loader, _ = DataLoader(train_ds, shuffle=True, batch_size=batch_size, drop_last=True, length=[TRAIN_NUM, ds_len_ - TRAIN_NUM)])
-    val_loader, _  = DataLoader(val_ds, shuffle=True, batch_size=valid_num//10, drop_last=True, length = [VALID_NUM, ds_len_ - VALID_NUM])
+    #assert isinstance(train_set,torch.utils.data.Dataset)
+    #train_ds, _ = torch.utils.data.random_split(train_ds, lengths=[TRAIN_NUM, ds_len - TRAIN_NUM])
+    #valid_ds, _ = torch.utils.data.random_split(valid_ds, lengths=[VALID_NUM, ds_len - VALID_NUM])
+    print(len(train_ds))
+    train_loader = DataLoader(train_ds, shuffle=True, batch_size=batch_size, drop_last=True)
+    val_loader  = DataLoader(valid_ds, shuffle=True, batch_size= batch_size * 16, drop_last=True)
     loss_fn = torch.nn.functional.binary_cross_entropy_with_logits
     if parallel:
         if model_type == "ode": 
@@ -132,7 +138,7 @@ def main(ds_len, train_ds, valid_ds,model_type = "ode",data_name = "mnist_50",ba
 #    ode_func = DDP(ODEBlock().to(device), output_device=device)
 #    ode_model = DDP(ODENet(ode_func,device=device).to(device),output_device=device)
         elif model_type == "cnn":
-            epochs= int(epochs * 1.5)
+#            epochs= int(epochs * 1.5)
             model = Network()
             model = nn.DataParallel(model).to(device)
     else:
@@ -157,8 +163,8 @@ def main(ds_len, train_ds, valid_ds,model_type = "ode",data_name = "mnist_50",ba
                       loss_fn=loss_fn, 
                       epochs=epochs,
                       parallel=parallel)
-
-    save_result(model,model_name=model_type,ds_name=data_name, result_dir=result_dir)
+     
+    save_result(his,model_name=model_type,ds_name=data_name, result_dir=result_dir)
     if not os.path.exists(f"{MODEL_DIR}/{model_type}_origin"):
         os.mkdir(f"{MODEL_DIR}/{model_type}_origin")
     print("Save original data modeling...")

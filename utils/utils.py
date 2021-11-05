@@ -26,7 +26,7 @@ def add_noise(converted_data, sigma = 10,device="cpu"):
     return pertubed_data
 def preprocess_data(data, shape = (28,28), sigma=None,device="cpu", train=False):
     if not train:
-        assert type(sigma) == type(list()) or type(sigma) == type(None), f"if train=False, the type(sigma) must be return a list object or NoneType object, but return {type(sigma)}"
+        #assert type(sigma) == type(list()) or type(sigma) == type(None), f"if train=False, the type(sigma) must be return a list object or NoneType object, but return {type(sigma)}"
         X = []
         Y = []
         ds = {}
@@ -55,10 +55,11 @@ def preprocess_data(data, shape = (28,28), sigma=None,device="cpu", train=False)
         Y = []
         for data_idx, (x, y) in list(enumerate(data)):
             std = random.choice(sigma)
-            X.append((np.array(x) + np.random.normal(np.zeros_like(x), sigma * np.ones_like(x))).reshape(1,shape[0],shape[0]))
+            noise_x = (np.array(x) + np.random.normal(np.zeros_like(np.array(x)), np.ones_like(np.array(x)) * std))
+            X.append(noise_x.reshape(1,shape[0],shape[0]))
             Y.append(y)
         y_data = F.one_hot(torch.Tensor(Y).to(torch.int64), num_classes=10)
         y_data = y_data.to(device)
         x_data = torch.Tensor(X)
         x_data = x_data.to(device)
-        return ds_, TensorDataset(x_data,y_data) 
+        return len(Y), TensorDataset(x_data,y_data) 
