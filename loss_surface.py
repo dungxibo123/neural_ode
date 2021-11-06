@@ -28,20 +28,20 @@ ode = ODENet(ODEBlock().to(device),device=device).to(device)
 
 MNIST = torchvision.datasets.MNIST("data/mnist")
 _ds_len, _ds = preprocess_data(MNIST, sigma=50.0, device=device)
-_ds, _ = torch.utils.data.random_split(_ds, [2048,60000-2048])
-loader = DataLoader(_ds, batch_size=128)
-xs,ys,uwu = calculate(Network,loader)
+_ds, _ = torch.utils.data.random_split(_ds, [32768,60000-32768])
+loader = DataLoader(_ds, batch_size=16384)
+#xs,ys,uwu = calculate(Network,loader)
 
 
-cnn_r = run(cnn,loader)
-ode_r = run(ode,loader)
+cnn_r = LossSurface.run(cnn,loader)
+ode_r = LossSurface.run(ode,loader)
 data = {}
 data.update({
-    "x": [x[0] for x in cnn_r],
-    "y": [y[1] for y in cnn_r],
+    "x": [x[0].item() for x in cnn_r],
+    "y": [y[1].item() for y in cnn_r],
     "ode": {
         "loss": [l[2] for l in ode_r]
-    }
+    },
     "cnn": {
         "loss": [l[2] for l in cnn_r]
     }
