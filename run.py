@@ -96,7 +96,7 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, 
             val_loss, val_acc = model.module.evaluate(val_loader)
         else:
             val_loss, val_acc = model.evaluate(val_loader)
-        if acc > best_acc and val_acc > 0.85:
+        if acc > best_acc:
             best_acc = acc
             best_epoch = epoch_id + 1
             best_model = model
