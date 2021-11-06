@@ -33,7 +33,7 @@ def preprocess_data(data, shape = (28,28), sigma=None,device="cpu", train=False)
         sigma_noise = [50.,75.,100.]
         for data_idx, (x,y) in list(enumerate(data)):
             #X.append(np.array(x).reshape((3,shape[0],shape[0])))
-            X.append(np.array(x).transpose(2,0,1))
+            X.append(np.array(x).transpose(2,0,1)) # Change the shape from (H,W,C) -> (C,H,W)
             Y.append(y)
         y_data = F.one_hot(torch.Tensor(Y).to(torch.int64), num_classes=10)
         y_data = y_data.to(device)

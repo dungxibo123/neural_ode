@@ -7,7 +7,33 @@ import sys
 import os
 
 sys.path.insert(0,os.path.abspath(__file__))
+class Model(nn.Module):
+    def __init__(self):
+        super(Model,self).__init__()
+    def evaluate(self, test_loader):
+        correct = 0
+        total = 0 
+        running_loss = 0
+        count = 0 
+        with torch.no_grad():
+            for test_data in test_loader:
+                count += 1
+                data, label = test_data
+                outputs = self.forward(data)
+                _, correct_labels = torch.max(label, 1) 
+                _, predicted = torch.max(outputs.data, 1)
+                total += label.size(0)
+                correct += (predicted == correct_labels).sum().item()
+                running_loss += F.torch.nn.functional.binary_cross_entropy_with_logits(
+                    outputs.float(), label.float()).item()
+        acc = correct / total
+        running_loss /= count
+        
+        return running_loss,acc
+    def loss_surface(self):
+        pass
 
+   
 class ODEBlock(nn.Module):
     def __init__(self, parallel=None):
         super(ODEBlock,self).__init__()
@@ -31,7 +57,7 @@ class ODEBlock(nn.Module):
         
         return out
      
-class ODENet(nn.Module):
+class ODENet(Model):
     def __init__(self, func, parallel=False, input_dim=1, device="cpu"):
         super(ODENet, self).__init__()
         assert isinstance(func, ODEBlock) or isinstance(func.module,ODEBlock), f"argument function is not NeuralODEs model"
@@ -82,7 +108,7 @@ class ODENet(nn.Module):
         running_loss /= count 
         return running_loss,acc
 
-class Network(nn.Module):
+class Network(Model):
     def __init__(self, input_dim=1):
         super(Network, self).__init__()
         self.fe = nn.Sequential(*[
@@ -116,24 +142,3 @@ class Network(nn.Module):
         return out
 
         return self.net(x)
-    def evaluate(self, test_loader):
-        correct = 0
-        total = 0 
-        running_loss = 0
-        count = 0 
-        with torch.no_grad():
-            for test_data in test_loader:
-                count += 1
-                data, label = test_data
-                outputs = self.forward(data)
-                _, correct_labels = torch.max(label, 1) 
-                _, predicted = torch.max(outputs.data, 1)
-                total += label.size(0)
-                correct += (predicted == correct_labels).sum().item()
-                running_loss += F.torch.nn.functional.binary_cross_entropy_with_logits(
-                    outputs.float(), label.float()).item()
-        acc = correct / total
-        running_loss /= count
-        
-        return running_loss,acc
-
