@@ -22,34 +22,30 @@ EPOCHS=1
 BATCH_SIZE=32
 IMG_SIZE=(28,28)
 
+cnn = Network().to(device)
+ode = ODENet(ODEBlock().to(device),device=device).to(device)
 
 
-
-def calculate(model, loader):
-    x = torch.linspace(-1,1,51)
-    y = torch.linspace(-1,1,51)
-    x,y = torch.meshgrid(x,y)
-    x = x.reshape(-1)
-    y = y.reshape(-1)
-    xs = []
-    ys = []
-    uwu = []
-    count = 0;
-    tic = time.time()
-    for xx,yy in zip(x,y):
-        print(xx,yy)
-        count += 1
-        loss_md = LossSurfaceModel(model,xx,yy,device=device).to(device)
-        xs.append(xx.item())
-        ys.append(yy.item())
-        uwu.append(loss_md.evaluate(loader)[0])
-        print("Number {:05d}\tTime: {:0.5f} second(s)".format(count, time.time() - tic))
-        tic = time.time()
-    return xs,ys,uwu
 MNIST = torchvision.datasets.MNIST("data/mnist")
 _ds_len, _ds = preprocess_data(MNIST, sigma=50.0, device=device)
-_ds, _ = torch.utils.data.random_split(_ds, [35000,25000])
-loader = DataLoader(_ds, batch_size=12500)
+_ds, _ = torch.utils.data.random_split(_ds, [2048,60000-2048])
+loader = DataLoader(_ds, batch_size=128)
 xs,ys,uwu = calculate(Network,loader)
+
+
+cnn_r = run(cnn,loader)
+ode_r = run(ode,loader)
+data = {}
+data.update({
+    "x": [x[0] for x in cnn_r],
+    "y": [y[1] for y in cnn_r],
+    "ode": {
+        "loss": [l[2] for l in ode_r]
+    }
+    "cnn": {
+        "loss": [l[2] for l in cnn_r]
+    }
+})
 with open('result/loss_surface.json', 'w') as f:
-    json.dump({"x": xs, "y":ys, "loss": uwu}, f)
+    json.dump(data, f)
+
