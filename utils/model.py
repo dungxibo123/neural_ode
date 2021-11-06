@@ -57,9 +57,10 @@ class ODENet(nn.Module):
         correct = 0
         total = 0 
         running_loss = 0
-        
+        count = 0 
         with torch.no_grad():
             for batch_id , test_data in enumerate(test_loader,0):
+                count += 1
                 data, label = test_data
                 outputs = self.forward(data)
                 _, correct_labels = torch.max(label, 1) 
@@ -70,7 +71,7 @@ class ODENet(nn.Module):
                     outputs.float(), label.float()).item()
         #        print(f"--> Total {total}\n-->batch_id: {batch_id + 1}")
         acc = round(correct/total * 1.0 , 5)
-         
+        running_loss /= count 
         return running_loss,acc
 
 class Network(nn.Module):
@@ -111,9 +112,10 @@ class Network(nn.Module):
         correct = 0
         total = 0 
         running_loss = 0
-        
+        count = 0        
         with torch.no_grad():
             for test_data in test_loader:
+                count += 1
                 data, label = test_data
                 outputs = self.forward(data)
                 _, correct_labels = torch.max(label, 1) 
@@ -123,6 +125,43 @@ class Network(nn.Module):
                 running_loss += F.torch.nn.functional.binary_cross_entropy_with_logits(
                     outputs.float(), label.float()).item()
         acc = round(correct/total * 1.0 , 5)
+        running_loss /= count
         
         return running_loss,acc
 
+
+class LossSurfaceModel(nn.Module):
+    def __init__(self, model, a, b, device="cpu"):
+        super(LossSurfaceModel, self).__init__()
+        self.a = a
+        self.b = b
+        if model == ODENet:
+            print("Loss on ODENet")
+            self.net1 = model(ODEBlock().to(device)).to(device)
+            self.net2 = model(ODEBlock().to(device)).to(device)
+        else:
+            print("Loss on CNNNet")
+            self.net1 = model().to(device)
+            self.net2 = model().to(device)
+    def forward(self,x):
+        return self.a.item() * self.net1(x) + self.b.item() * self.net2(x)
+    def evaluate(self,test_loader):
+        #def evaluate(self, test_loader):
+        correct = 0
+        total = 0 
+        running_loss = 0 
+        count = 0
+        with torch.no_grad(): 
+            for test_data in test_loader:
+                count += 1
+                data, label = test_data
+                outputs = self.forward(data)
+                _, correct_labels = torch.max(label, 1) 
+                _, predicted = torch.max(outputs.data, 1)
+                total += label.size(0)
+                correct += (predicted == correct_labels).sum().item()
+                running_loss += F.torch.nn.functional.binary_cross_entropy_with_logits(
+                    outputs.float(), label.float()).item()
+        acc = correct / total 
+        running_loss /= count 
+        return running_loss,acc
