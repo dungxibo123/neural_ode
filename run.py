@@ -55,10 +55,12 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, 
         total = 0
         correct = 0
         running_loss = 0
+        count = 0
         print(f"Start epoch number: {epoch_id + 1}")
 #        print(next(enumerate(train_loader,0)))
         loads = list(enumerate(train_loader,0))
         for batch_id, data in loads:
+            count += 1
 #            print("Go here please")
             # get the inputs; data is a list of [inputs, labels]
             #print(f"Start batch number: {batch_id + 1} in epoch number: {epoch_id + 1}")
@@ -89,6 +91,7 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, 
             #print("End batch number: {batch_id + 1} in epoch number {epoch_id + 1}")
         #acc = round(correct/total * 1.0, 5)
         acc = correct / total
+        running_loss /= count
         #print("Accuracy was calculated")
         history["acc"].append(acc)
         history["loss"].append(running_loss)
