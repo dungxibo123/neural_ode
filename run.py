@@ -26,6 +26,7 @@ parser.add_argument("-vl", "--valid", type=int, default=2000, help="Number of va
 parser.add_argument("-lr", "--learning-rate",type=float, default=1e-3, help="Learning rate in optimizer")
 parser.add_argument("-md", "--model", type=str, default="./model", help="Where model going to")
 parser.add_argument("-pr", "--parallel", type=bool, default=False, help="Parallel or not")
+parser.add_argument("-wd", "--weight-decay", type=float, default=0.1, help="Weight decay")
 args = parser.parse_args()
 
 
@@ -42,11 +43,11 @@ TEST_NUM=60000-TRAIN_NUM-VALID_NUM
 DATA_DISTRIBUTION=[TRAIN_NUM,VALID_NUM,TEST_NUM]
 MODEL_DIR=args.model
 PARALLEL=args.parallel
+WEIGHT_DECAY=args.weight_decay
 
 
 
-
-def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, parallel=None):
+def train_model(model, optimizer, train_loader, val_loader,loss_fn, lr_scheduler=None, epochs=100, parallel=None):
     #print(model.eval())
     print(f"Numbers of parameters in model: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
     best_model, best_acc, best_epoch = None, 0, 0
@@ -88,7 +89,10 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, 
             running_loss += loss.item() 
             #print("End batch number: {batch_id + 1} in epoch number {epoch_id + 1}")
         #acc = round(correct/total * 1.0, 5)
+        if lr_scheduler:
+            lr_scheduler.step()
         acc = correct / total
+
         #print("Accuracy was calculated")
         history["acc"].append(acc)
         history["loss"].append(running_loss)
@@ -119,8 +123,7 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, epochs=100, 
 
 
 
-
-def main(ds_len, train_ds, valid_ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epochs=100, lr=1e-3,train_num = 0, valid_num = 0, test_num = 0, device="cpu", result_dir="./result", model_dir="./model", parallel=None):
+def main(ds_len, train_ds, valid_ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epochs=100, lr=1e-3,train_num = 0, valid_num = 0, test_num = 0, weight_decay=None, device="cpu", result_dir="./result", model_dir="./model", parallel=None):
     print(f"Number of train: {train_num}\nNumber of validation: {valid_num}")
     #train_set = torch.utils.data.random_split(ds)
     #print(type(train_set))
@@ -152,16 +155,19 @@ def main(ds_len, train_ds, valid_ds,model_type = "ode",data_name = "mnist_50",ba
 #    ode_func = DDP(ODEBlock().to(device), output_device=device)
 #    ode_model = DDP(ODENet(ode_func,device=device).to(device),output_device=device)
         elif model_type == "cnn":
-            epochs= int(epochs * 1.5)
+            #epochs= int(epochs * 1.5)
             model = Network().to(device)
             #model = nn.DataParallel(model).to(device)
         
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    if weight_decay:
+        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=weight_decay, patience=5)
     his, model, epoch, acc = train_model(model, 
                       optimizer, 
                       train_loader,
                       val_loader,
+                      lr_scheduler=lr_scheduler,
                       loss_fn=loss_fn, 
                       epochs=epochs,
                       parallel=parallel)
@@ -179,7 +185,7 @@ MNIST = torchvision.datasets.MNIST(DATA_DIR,
                                    target_transform=None, download=True)
 
 ds_len_, ds_ = preprocess_data(MNIST, sigma=None, device=device)
-ds_len_, pertubed_ds_ = preprocess_data(MNIST, sigma=[20.0,30.0,40.0], device=device, train=True)
+ds_len_, pertubed_ds_ = preprocess_data(MNIST, sigma=[25.0,30.0,40.0], device=device, train=True)
 print(type(ds_))
     
 sigma = [None, 1e-7, 50.0, 75.0, 100.0]
