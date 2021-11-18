@@ -43,6 +43,12 @@ class ODEBlock(nn.Module):
         self.relu  = nn.ReLU()
         self.conv2 = nn.Conv2d(64+1,64,3,1, padding=1)
         self.norm2 = nn.GroupNorm(32,64)
+        self.conv3 = nn.Conv2d(64+1,64,3,1, padding=1)
+        self.norm3 = nn.GroupNorm(32,64)
+        self.conv4 = nn.Conv2d(64+1,64,3,1, padding=1)
+        self.norm4 = nn.GroupNorm(32,64)
+        self.conv5 = nn.Conv2d(64+1,64,3,1, padding=1)
+        self.norm5 = nn.GroupNorm(32,64)
         
     def forward(self,t,x): 
         tt = torch.ones_like(x[:, :1, :, :]) * t
@@ -53,6 +59,18 @@ class ODEBlock(nn.Module):
         out = torch.cat([tt, out], 1)
         out = self.conv2(out)
         out = self.norm2(out)
+        out = self.relu(out)
+        out = torch.cat([tt, out], 1)
+        out = self.conv3(out)
+        out = self.norm3(out)
+        out = self.relu(out)
+        out = torch.cat([tt, out], 1)
+        out = self.conv4(out)
+        out = self.norm4(out)
+        out = self.relu(out)
+        out = torch.cat([tt, out], 1)
+        out = self.conv5(out)
+        out = self.norm5(out)
         out = self.relu(out)
         
         return out
@@ -124,6 +142,15 @@ class Network(Model):
             nn.Conv2d(64,64,3,1, padding=1),
             nn.GroupNorm(32,64),
             nn.ReLU(), 
+            nn.Conv2d(64,64,3,1, padding=1),
+            nn.GroupNorm(32,64),
+            nn.ReLU(),
+            nn.Conv2d(64,64,3,1, padding=1),
+            nn.GroupNorm(32,64),
+            nn.ReLU(),
+            nn.Conv2d(64,64,3,1, padding=1),
+            nn.GroupNorm(32,64),
+            nn.ReLU(),
             nn.Conv2d(64,64,3,1, padding=1),
             nn.GroupNorm(32,64),
             nn.ReLU(),
