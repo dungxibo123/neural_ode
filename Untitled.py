@@ -13,8 +13,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import TensorDataset, DataLoader, random_split
 import torchvision
-import matplotlib.pyplot as plt
-from tqdm.notebook import tqdm
+#import matplotlib.pyplot as plt
+from tqdm import tqdm
 from torchdiffeq import odeint_adjoint as odeint
 # from jupyterthemes import jtplot
 # from neural_ode.utils import *
@@ -66,13 +66,13 @@ class ODENet(nn.Module):
     def __init__(self, func, parallel=False, device="cpu"):
         super(ODENet, self).__init__()
         assert isinstance(func, ODEBlock) or isinstance(func.module,ODEBlock), f"argument function is not NeuralODEs model"
-        self.fe = nn.Sequential(*[nn.Conv2d(3,64,3,1),
-                                  nn.GroupNorm(32,64),
+        self.fe = nn.Sequential(*[nn.Conv2d(3,16,3,1),
+                                  nn.GroupNorm(16,16),
                                   nn.ReLU(),
-                                  # nn.Conv2d(64,64,3,1),
-                                  # nn.GroupNorm(32,64),
-                                  # nn.ReLU(),
-                                  nn.Conv2d(64,64,4,2),
+                                  nn.Conv2d(16,32,3,2),
+                                  nn.GroupNorm(32,32),
+                                  nn.ReLU(),
+                                  nn.Conv2d(32,64,4,2),
                                   nn.GroupNorm(32,64),
                                   #1x64x12x12
                                   nn.ReLU()])
@@ -120,13 +120,13 @@ class Network(nn.Module):
     def __init__(self):
         super(Network, self).__init__()
         self.fe = nn.Sequential(*[
-            nn.Conv2d(3,64,3,1),
-            nn.GroupNorm(32,64),
+            nn.Conv2d(3,16,3,1),
+            nn.GroupNorm(16,16),
             nn.ReLU(),
-            # nn.Conv2d(64,64,3,1),
-            # nn.GroupNorm(32,64),
-            # nn.ReLU(),
-            nn.Conv2d(64,64,4,2),
+            nn.Conv2d(16,32,3,2),
+            nn.GroupNorm(32,32),
+            nn.ReLU(),
+            nn.Conv2d(32,64,3,2),
             nn.GroupNorm(32,64),
             nn.ReLU()
              
@@ -221,8 +221,6 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, lr_scheduler
             running_loss += loss.item() 
             #print("End batch number: {batch_id + 1} in epoch number {epoch_id + 1}")
         #acc = round(correct/total * 1.0, 5)
-        if lr_scheduler is not None:
-            lr_scheduler.step()
         acc = correct / total
 
         #print("Accuracy was calculated")
@@ -232,10 +230,12 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, lr_scheduler
             val_loss, val_acc = model.module.evaluate(val_loader)
         else:
             val_loss, val_acc = model.evaluate(val_loader)
-        if acc > best_acc:
+        if val_acc > best_acc:
             best_acc = acc
             best_epoch = epoch_id + 1
             best_model = model
+        if lr_scheduler is not None:
+            lr_scheduler.step(val_loss)        
         history["val_loss"].append(val_loss)
         history["val_acc"].append(val_acc)
         running_loss /= len(loads)
@@ -255,7 +255,7 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, lr_scheduler
 
 
 
-def main(ds_len, train_ds, valid_ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epochs=100, lr=1e-3,train_num = 0, valid_num = 0, test_num = 0, weight_decay=None, device="cpu", result_dir="./result", model_dir="./model", parallel=None):
+def main(ds_len, train_ds, valid_ds,model_type = "ode",data_name = "mnist_50",batch_size=32,epochs=100, lr=1e-3,train_num = 0, valid_num = 0, test_num = 0, weight_decay=0.1, device="cpu", result_dir="./result", model_dir="./model", parallel=None):
     print(f"Number of train: {train_num}\nNumber of validation: {valid_num}")
     #train_set = torch.utils.data.random_split(ds)
     #print(type(train_set))
@@ -292,7 +292,7 @@ def main(ds_len, train_ds, valid_ds,model_type = "ode",data_name = "mnist_50",ba
             #model = nn.DataParallel(model).to(device)
         
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     lr_scheduler = None
     if weight_decay is not None:
         lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=weight_decay, patience=5)
@@ -367,7 +367,7 @@ def preprocess_data(data, shape = (28,28), sigma=None,device="cpu", train=False)
 
 
 BATCH_SIZE = 128
-EPOCHS = 500
+EPOCHS = 120
 TRAIN_NUM = VALID_NUM = TEST_NUM = 0
 MNIST = torchvision.datasets.CIFAR10('./data',
                                    train=True,
@@ -375,10 +375,10 @@ MNIST = torchvision.datasets.CIFAR10('./data',
                                    target_transform=None, download=True)
 
 ds_len_, ds_ = preprocess_data(MNIST, sigma=None, device=device)
-ds_len_, pertubed_ds_ = preprocess_data(MNIST, sigma=[25.0,30.0,40.0], device=device, train=True)
+ds_len_, pertubed_ds_ = preprocess_data(MNIST, sigma=[15.0], device=device, train=True)
 print(type(ds_))
     
-sigma = [None, 1e-7, 50.0, 75.0, 100.0]
+sigma = [None, 1e-7, 15.0, 20.0, 50.0, 75.0, 100.0]
 loaders = [(key,DataLoader(preprocess_data(MNIST, sigma=key, device=device, train=False)[1], batch_size=12000)) for key in sigma]
 
 
@@ -402,7 +402,7 @@ for k in sigma:
 
 
 print(device)
-EPOCHS = 100
+EPOCHS = 120
 
 
 # In[ ]:
