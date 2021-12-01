@@ -93,4 +93,4 @@ dependencies:
     - torchsde==0.2.5
     - trampoline==0.1.2
     - urllib3==1.26.7
-prefix: /home/dungvt19/miniconda3/envs/neuralcde
+prefix: /home/dungvt/miniconda3/envs/ml
