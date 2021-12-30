@@ -81,7 +81,7 @@ def train_model(model, optimizer, train_loader, val_loader,loss_fn, lr_scheduler
             correct += (predicted == correct_labels).sum().item()
             #print("Calculate the number of correct predictions")
             #print(labels.shape, outputs.shape)
-            loss = loss_fn(outputs.float(), labels.float())
+            loss = loss_fn(predicted, correct_labels)
             loss.backward()
             #print("Backward loss")
             optimizer.step()
