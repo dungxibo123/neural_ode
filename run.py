@@ -133,7 +133,7 @@ def main(ds_len, train_ds, valid_ds,model_type = "ode",data_name = "mnist_50",ba
     print(len(train_ds))
     train_loader = DataLoader(train_ds, shuffle=True, batch_size=batch_size, drop_last=True)
     val_loader  = DataLoader(valid_ds, shuffle=True, batch_size= batch_size * 16, drop_last=True)
-    loss_fn = torch.nn.functional.binary_cross_entropy_with_logits
+    loss_fn = torch.nn.functional.cross_entropy
     if parallel:
         if model_type == "ode": 
             ode_func = ODEBlock(parallel=parallel)
